@@ -1,0 +1,10 @@
+To run tests:
+
+bundle exec rspec spec
+
+
+To test in irb:
+
+gem build nando.gemspec 
+gem install nando-0.1.0.gem
+irb
