@@ -3,11 +3,8 @@ require "nando/version"
 module Nando
   class Error < StandardError; end
   
-  def nando
-    puts 'Nando says hi'
+  def self.new_migration
+    puts 'Creating a new migration'
   end
 
-  def migrate
-    puts 'Gonna migrate'
-  end
 end
