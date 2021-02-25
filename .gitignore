@@ -9,3 +9,6 @@
 
 # rspec failure tracking
 .rspec_status
+
+# gem versions (may move to a folder later)
+nando*.gem
