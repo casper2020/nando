@@ -3,4 +3,4 @@
 require "bundler/setup"
 require "nando"
 
-Nando.new_migration
+new_migration
