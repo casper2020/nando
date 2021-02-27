@@ -12,3 +12,6 @@
 
 # gem versions (may move to a folder later)
 nando*.gem
+
+# test db/migrate folder (may remove later
+/db/
