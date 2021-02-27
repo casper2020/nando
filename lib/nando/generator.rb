@@ -1,10 +1,16 @@
-def self.new_migration (args = {})
-  migration_name = args.fetch(:name).underscore
-
-  puts "Creating a new migration: #{migration_name}"
+module NandoMigration
+  
+  # creates a new migration for the tool
+  def self.new_migration (args = {})
+    migration_name = args.fetch(:name).underscore
+    migration_timestamp = Time.now.strftime("%Y%m%d%H%M%S") # same format as ActiveRecord: year-month-day-hour-minute-second
+  
+    migration_file_name = "#{migration_timestamp}_#{migration_name}"
+  
+    puts "Creating a new migration: #{migration_file_name}"
+  end
 end
 
-# timestamp example: 20200713100600
 
 # module Nando
 #   class Error < StandardError; end
