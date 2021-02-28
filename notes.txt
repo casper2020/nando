@@ -8,3 +8,16 @@ To test in irb:
 gem build nando.gemspec 
 gem install nando-0.1.0.gem
 irb
+
+
+To create a migration:
+
+./bin/generate -n TestMigration
+
+
+To migrate the database:
+./bin/migrate
+
+
+To rollback the database:
+./bin/rollback

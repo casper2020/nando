@@ -15,6 +15,20 @@ module NandoMigrator
     puts "Creating a new migration: #{migration_file_name}"
   end
 
+  # migrates all missing migrations
+  def self.migrate (args = {})
+    puts "Migrating!"
+  end
+
+  # rollbacks 1 migration (or more depending on argument)
+  def self.rollback (args = {})
+    puts "Rollback!"
+  end
+
+  # TODO: might add a migrate:down to distinguish from rollback, similarly to ActiveRecord
+
+  # --------------------------------------------------------
+
   def self.create_migration_file (filepath)
     dir = File.dirname(filepath)
 

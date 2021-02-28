@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+
+require "bundler/setup"
+require "nando"
+
+# TODO: this will require options later on
+
+begin
+  NandoMigrator.rollback()
+rescue Exception => e
+  STDERR.puts %Q[An error has occurred. Run "#{File.basename($0)} --help" for details.]
+  exit 1
+end
