@@ -1,3 +1,3 @@
 require 'nando'
 require "nando/version"
-require 'nando/generator'
+require 'nando/migrator'

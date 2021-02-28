@@ -1,4 +1,4 @@
-module NandoMigration
+module NandoMigrator
   
   # creates a new migration for the tool
   def self.new_migration (args = {})
