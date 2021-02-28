@@ -1,18 +1,21 @@
 module NandoMigrator
-  
+
+  @@migration_dir = 'db/migrate' # TODO: might change later to env file
+
+  def self.migration_dir; @@migration_dir end
+
+  # --------------------------------------------------------
+
   # creates a new migration for the tool
   def self.new_migration (args = {})
     migration_name = args.fetch(:name).underscore
     migration_timestamp = Time.now.strftime("%Y%m%d%H%M%S") # same format as ActiveRecord: year-month-day-hour-minute-second
-  
+
     migration_file_name = "#{migration_timestamp}_#{migration_name}"
-  
-    dir = 'db/migrate' # this might change later
-    path = "#{dir}/#{migration_file_name}"
+    migration_file_path = "#{migration_dir}/#{migration_file_name}.rb"
 
-    create_migration_file(path)
-
-    puts "Creating a new migration: #{migration_file_name}"
+    create_migration_file(migration_file_path)
+    puts "Creating a new migration: #{migration_file_path}"
   end
 
   # migrates all missing migrations
@@ -36,8 +39,7 @@ module NandoMigrator
       STDERR.puts %Q[No directory "#{dir}" was found.]
       exit 3
     end
-    
-    filepath << ".rb" # append the rb extension
+
     File.new(filepath, 'w')
   end
 end
