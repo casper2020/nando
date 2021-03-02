@@ -1,3 +1,5 @@
+require 'pg'
+
 module NandoMigrator
 
   @@migration_dir = 'db/migrate' # TODO: might change later to env file
@@ -21,6 +23,27 @@ module NandoMigrator
   # migrates all missing migrations
   def self.migrate (args = {})
     puts "Migrating!"
+
+    migration_files = get_migration_files(migration_dir)
+
+    if migration_files.length == 0
+      STDERR.puts "No migration files were found in \"#{migration_dir}\"!"
+      exit 1
+    end
+
+    applied_migrations = get_applied_migrations()
+
+    for filename in migration_files do
+      version = get_migration_version(filename)
+
+      if applied_migrations[version]
+        next
+      end
+      puts "Applying: #{filename}"
+
+      # execute_migration_up();
+    end
+
   end
 
   # rollbacks 1 migration (or more depending on argument)
@@ -42,6 +65,45 @@ module NandoMigrator
 
     File.new(filepath, 'w')
   end
+
+  def self.get_migration_files (directory)
+    files = Dir.children(directory)
+
+    migration_files = []
+    for filename in files do
+      if !/\d\_.*\.rb$/.match(filename)
+        puts "Warning: #{filename} does not have a valid migration name"
+        next
+      end
+
+      migration_files.push(filename)
+    end
+
+    migration_files.sort! # sort to ensure the migrations are executed chronologically
+  end
+
+  def self.get_applied_migrations
+    # TODO: redo this to be a function that returns de DB
+    conn = PGconn.connect( :hostaddr=>"127.0.0.1", :port=>5432, :dbname=>"tests_diss", :user=>"toconline")
+
+    # run the query
+    result = conn.exec("SELECT * FROM schema_migrations")
+
+    applied_migrations = {}
+    puts "---------------------------------"
+    puts "Applied migrations:"
+    result.each{ |row|
+      puts "#{row["version"]}"
+      applied_migrations[row["version"]] = true
+    }
+    puts "---------------------------------"
+    return applied_migrations
+  end
+
+  def self.get_migration_version (filename)
+    /^(\d+)/.match(filename)[1] # by this point, a filename has already been validated, so I don't need to double check
+  end
+
 end
 
 

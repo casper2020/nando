@@ -8,6 +8,7 @@ require "nando"
 begin
   NandoMigrator.migrate()
 rescue Exception => e
+  STDERR.puts e
   STDERR.puts %Q[An error has occurred. Run "#{File.basename($0)} --help" for details.]
   exit 1
 end
