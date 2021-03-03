@@ -31,7 +31,8 @@ module NandoMigrator
       exit 1
     end
 
-    applied_migrations = get_applied_migrations()
+    db_connection = get_database_connection()
+    applied_migrations = get_applied_migrations(db_connection)
 
     for filename in migration_files do
       version = get_migration_version(filename)
@@ -82,17 +83,15 @@ module NandoMigrator
     migration_files.sort! # sort to ensure the migrations are executed chronologically
   end
 
-  def self.get_applied_migrations
-    # TODO: redo this to be a function that returns de DB
-    conn = PGconn.connect( :hostaddr=>"127.0.0.1", :port=>5432, :dbname=>"tests_diss", :user=>"toconline")
+  def self.get_applied_migrations (db_connection)
 
     # run the query
-    result = conn.exec("SELECT * FROM schema_migrations")
+    results = db_connection.exec("SELECT * FROM schema_migrations")
 
     applied_migrations = {}
     puts "---------------------------------"
     puts "Applied migrations:"
-    result.each{ |row|
+    results.each{ |row|
       puts "#{row["version"]}"
       applied_migrations[row["version"]] = true
     }
@@ -102,6 +101,11 @@ module NandoMigrator
 
   def self.get_migration_version (filename)
     /^(\d+)/.match(filename)[1] # by this point, a filename has already been validated, so I don't need to double check
+  end
+
+  def self.get_database_connection
+    # TODO: redo this to use dynamic parameters from a .env file
+    conn = PGconn.connect( :hostaddr=>"127.0.0.1", :port=>5432, :dbname=>"tests_diss", :user=>"toconline")
   end
 
 end
