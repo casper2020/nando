@@ -31,8 +31,8 @@ module NandoMigrator
       exit 1
     end
 
-    db_connection = get_database_connection()
-    applied_migrations = get_applied_migrations(db_connection)
+    @db_connection = get_database_connection()
+    applied_migrations = get_applied_migrations()
 
     for filename in migration_files do
       version = get_migration_version(filename)
@@ -83,10 +83,9 @@ module NandoMigrator
     migration_files.sort! # sort to ensure the migrations are executed chronologically
   end
 
-  def self.get_applied_migrations (db_connection)
-
+  def self.get_applied_migrations ()
     # run the query
-    results = db_connection.exec("SELECT * FROM schema_migrations")
+    results = @db_connection.exec("SELECT * FROM schema_migrations")
 
     applied_migrations = {}
     puts "---------------------------------"
