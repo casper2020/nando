@@ -21,3 +21,40 @@ To migrate the database:
 
 To rollback the database:
 ./bin/rollback
+
+
+TEMPORARY NOTES
+
+
+DBMATE
+
+MIGRATE
+
+findMigrationFiles => Encontra os ficheiro de migrações
+    iterar por todas as entries no diretório de migrações
+    se for um diretório, continue
+    se não der match com o regex "migrationFileRegexp", continue
+    sort do array de resultados (não sei se isto é mesmo preciso, mas eles fazem, prolly para garantir que corre tudo na ordem correta)
+
+if there are no migration files => error
+
+if db.WaitBefore (deve ser alguma variável interna para concorrência) => wait
+
+openDatabaseForMigration => open DB for migration
+
+SelectMigrations => obter migrations from schema_migrations
+
+iterar pelos files |filename|
+    obter a version a partir do filename
+    verificar se já existe nas migrações já corridas
+        se sim, continue
+    print "applying"
+    obter o método up com "parseMigration"
+    se for para criar transaction
+        abrir transaction
+        correr migração
+    se não for
+        correr migração
+    correr migração consiste em
+        executar o código a migração
+        InsertMigration => record migration, assumo que deve ser adicionar ao schema_migrations

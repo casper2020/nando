@@ -1,5 +1,7 @@
 require 'pg'
 
+TestMigration = 100 # TODO: remove this
+
 module NandoMigrator
 
   @@migration_dir = 'db/migrate' # TODO: might change later to env file
@@ -35,13 +37,19 @@ module NandoMigrator
     applied_migrations = get_applied_migrations()
 
     for filename in migration_files do
-      version = get_migration_version(filename)
+      migration_version, migration_name = get_migration_version_and_name(filename)
 
-      if applied_migrations[version]
+      if applied_migrations[migration_version]
         next
       end
       puts "Applying: #{filename}"
 
+      classname = get_migration_classname(migration_name)
+      puts classname
+
+      # execute <<-'SQL'
+      #   INSERT INTO users (name, email) VALUES ('Nandex', 'nandex@mail.com');
+      # SQL
       # execute_migration_up();
     end
 
@@ -55,6 +63,11 @@ module NandoMigrator
   # TODO: might add a migrate:down to distinguish from rollback, similarly to ActiveRecord
 
   # --------------------------------------------------------
+
+  # TODO: this might get moved, used to execute SQL in the migrations
+  def self.execute (sql)
+    @db_connection.exec(sql)
+  end
 
   def self.create_migration_file (filepath)
     dir = File.dirname(filepath)
@@ -98,8 +111,16 @@ module NandoMigrator
     return applied_migrations
   end
 
-  def self.get_migration_version (filename)
-    /^(\d+)/.match(filename)[1] # by this point, a filename has already been validated, so I don't need to double check
+  def self.get_migration_version_and_name (filename)
+    match = /^(\d+)\_(.*)\.rb/.match(filename)
+    migration_version = match[1] # by this point, a filename has already been validated, so I don't need to double check
+    migration_name = match[2]
+    return migration_version, migration_name
+  end
+
+  def self.get_migration_classname (filename)
+    name = filename.camelize
+    Object.const_defined?(name) ? name : Object.const_missing(name) # if the constant does not exist, raise error
   end
 
   def self.get_database_connection
@@ -115,12 +136,23 @@ end
 # end
 
 class String
-  # used to convert to snake case
+  # used to convert to snake case (Rails)
   def underscore
     self.gsub(/::/, '/')
         .gsub(/([A-Z]+)([A-Z][a-z])/,'\1_\2')
         .gsub(/([a-z\d])([A-Z])/,'\1_\2')
         .tr("-", "_")
         .downcase
+  end
+
+  # used to convert to camel or Pascal case (Rails)
+  def camelize(uppercase_first_letter = true)
+    string = self
+    if uppercase_first_letter
+      string = string.sub(/^[a-z\d]*/) { |match| match.capitalize }
+    else
+      string = string.sub(/^(?:(?=\b|[A-Z_])|\w)/) { |match| match.downcase }
+    end
+    string.gsub(/(?:_|(\/))([a-z\d]*)/) { "#{$1}#{$2.capitalize}" }.gsub("/", "::")
   end
 end
