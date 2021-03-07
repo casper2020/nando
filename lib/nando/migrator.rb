@@ -50,7 +50,7 @@ module NandoMigrator
       migration_class = class_const.new()
       migration_class.set_connection(@db_connection)
       migration_class.up()
-      apply_migration(migration_version)
+      update_migration_table(migration_version)
 
     end
 
@@ -107,8 +107,12 @@ module NandoMigrator
     return applied_migrations
   end
 
-  def self.apply_migration (version) 
-    @db_connection.exec("INSERT INTO #{@migration_table} (#{@migration_field}) VALUES (#{version})") 
+  def self.update_migration_table (version, to_apply = true) 
+    if to_apply
+      @db_connection.exec("INSERT INTO #{@migration_table} (#{@migration_field}) VALUES (#{version})") 
+    else
+      @db_connection.exec("DELETE FROM #{@migration_table} WHERE #{@migration_field} = '#{version}'") 
+    end
   end
 
   def self.get_migration_version_and_name (filename)
