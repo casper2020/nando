@@ -1,8 +1,9 @@
 require 'pg'
 
-TestMigration = 100 # TODO: remove this
-
 module NandoMigrator
+
+  @migration_table = 'schema_migrations';
+  @migration_field = 'version';
 
   @@migration_dir = 'db/migrate' # TODO: might change later to env file
 
@@ -44,13 +45,15 @@ module NandoMigrator
       end
       puts "Applying: #{filename}"
 
-      classname = get_migration_classname(migration_name)
-      puts classname
+      require "./#{migration_dir}/#{filename}"
 
-      # execute <<-'SQL'
-      #   INSERT INTO users (name, email) VALUES ('Nandex', 'nandex@mail.com');
-      # SQL
-      # execute_migration_up();
+      class_const = get_migration_class(migration_name)
+
+      migration_class = class_const.new()
+      migration_class.set_connection(@db_connection)
+      migration_class.up()
+      apply_migration(migration_version)
+
     end
 
   end
@@ -63,11 +66,6 @@ module NandoMigrator
   # TODO: might add a migrate:down to distinguish from rollback, similarly to ActiveRecord
 
   # --------------------------------------------------------
-
-  # TODO: this might get moved, used to execute SQL in the migrations
-  def self.execute (sql)
-    @db_connection.exec(sql)
-  end
 
   def self.create_migration_file (filepath)
     dir = File.dirname(filepath)
@@ -98,17 +96,21 @@ module NandoMigrator
 
   def self.get_applied_migrations ()
     # run the query
-    results = @db_connection.exec("SELECT * FROM schema_migrations")
+    results = @db_connection.exec("SELECT * FROM #{@migration_table}")
 
     applied_migrations = {}
     puts "---------------------------------"
     puts "Applied migrations:"
     results.each{ |row|
-      puts "#{row["version"]}"
-      applied_migrations[row["version"]] = true
+      puts "#{row[@migration_field]}"
+      applied_migrations[row[@migration_field]] = true
     }
     puts "---------------------------------"
     return applied_migrations
+  end
+
+  def self.apply_migration (version) 
+    @db_connection.exec("INSERT INTO #{@migration_table} (#{@migration_field}) VALUES (#{version})") 
   end
 
   def self.get_migration_version_and_name (filename)
@@ -118,9 +120,9 @@ module NandoMigrator
     return migration_version, migration_name
   end
 
-  def self.get_migration_classname (filename)
+  def self.get_migration_class (filename)
     name = filename.camelize
-    Object.const_defined?(name) ? name : Object.const_missing(name) # if the constant does not exist, raise error
+    Object.const_defined?(name) ? Object.const_get(name) : Object.const_missing(name) # if the constant does not exist, raise error
   end
 
   def self.get_database_connection
