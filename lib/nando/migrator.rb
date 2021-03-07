@@ -2,12 +2,10 @@ require 'pg'
 
 module NandoMigrator
 
-  @migration_table = 'schema_migrations';
-  @migration_field = 'version';
-
-  @@migration_dir = 'db/migrate' # TODO: might change later to env file
-
-  def self.migration_dir; @@migration_dir end
+  # TODO: change later to env file
+  @migration_table = 'schema_migrations'
+  @migration_field = 'version'
+  @migration_dir = 'db/migrate'
 
   # --------------------------------------------------------
 
@@ -17,7 +15,7 @@ module NandoMigrator
     migration_timestamp = Time.now.strftime("%Y%m%d%H%M%S") # same format as ActiveRecord: year-month-day-hour-minute-second
 
     migration_file_name = "#{migration_timestamp}_#{migration_name}"
-    migration_file_path = "#{migration_dir}/#{migration_file_name}.rb"
+    migration_file_path = "#{@migration_dir}/#{migration_file_name}.rb"
 
     create_migration_file(migration_file_path)
     puts "Creating a new migration: #{migration_file_path}"
@@ -27,10 +25,10 @@ module NandoMigrator
   def self.migrate (args = {})
     puts "Migrating!"
 
-    migration_files = get_migration_files(migration_dir)
+    migration_files = get_migration_files(@migration_dir)
 
     if migration_files.length == 0
-      STDERR.puts "No migration files were found in \"#{migration_dir}\"!"
+      STDERR.puts "No migration files were found in \"#{@migration_dir}\"!"
       exit 1
     end
 
@@ -45,7 +43,7 @@ module NandoMigrator
       end
       puts "Applying: #{filename}"
 
-      require "./#{migration_dir}/#{filename}"
+      require "./#{@migration_dir}/#{filename}"
 
       class_const = get_migration_class(migration_name)
 
