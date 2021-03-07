@@ -41,17 +41,8 @@ module NandoMigrator
       if applied_migrations[migration_version]
         next
       end
-      puts "Applying: #{filename}"
 
-      require "./#{@migration_dir}/#{filename}"
-
-      class_const = get_migration_class(migration_name)
-
-      migration_class = class_const.new()
-      migration_class.set_connection(@db_connection)
-      migration_class.up()
-      update_migration_table(migration_version)
-
+      execute_migration_method(:up, filename, migration_name, migration_version)
     end
 
   end
@@ -105,6 +96,25 @@ module NandoMigrator
     }
     puts "---------------------------------"
     return applied_migrations
+  end
+
+  def self.execute_migration_method (method, filename, migration_name, migration_version)
+    if method == :up
+      migrating = true
+    else
+      migrating = false
+    end
+    
+    puts migrating ? "Applying: #{filename}" : "Reverting: #{filename}"
+
+    require "./#{@migration_dir}/#{filename}"
+
+    class_const = get_migration_class(migration_name)
+
+    migration_class = class_const.new()
+    migration_class.set_connection(@db_connection)
+    migration_class.send(method)
+    update_migration_table(migration_version, migrating)
   end
 
   def self.update_migration_table (version, to_apply = true) 
