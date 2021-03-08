@@ -50,6 +50,30 @@ module NandoMigrator
   # rollbacks 1 migration (or more depending on argument)
   def self.rollback (args = {})
     puts "Rollback!"
+
+    rollback_count = 1 # TODO: temporary constant, add option in command interface
+
+    @db_connection = get_database_connection()
+    migrations_to_revert = get_migrations_to_revert(rollback_count)
+
+    if migrations_to_revert.length == 0
+      STDERR.puts "There are no migrations to revert!"
+      exit 1
+    end
+
+    # TODO: create function to just get necessary files
+    migration_files = get_migration_files_to_rollback(@migration_dir, migrations_to_revert)
+    if migration_files.length == 0
+      STDERR.puts "No migration files were found in \"#{@migration_dir}\"!"
+      exit 1
+    end
+
+    for migration_index in 0...migration_files.length do
+      filename = migration_files[migration_index]
+      migration_version, migration_name = get_migration_version_and_name(filename)
+
+      execute_migration_method(:down, filename, migration_name, migration_version)
+    end
   end
 
   # TODO: might add a migrate:down to distinguish from rollback, similarly to ActiveRecord
@@ -83,9 +107,30 @@ module NandoMigrator
     migration_files.sort! # sort to ensure the migrations are executed chronologically
   end
 
+  # TODO: might merge with "get_migration_files"
+  def self.get_migration_files_to_rollback (directory, versions_to_rollback)
+    files = Dir.children(directory)
+
+    migration_files = []
+    for filename in files do
+      match = /(\d+)\_.*\.rb$/.match(filename)
+      if match[0].nil?
+        # TODO: test this again for rollback
+        puts "Warning: #{filename} does not have a valid migration name"
+        next
+      end
+
+      if versions_to_rollback.include?(match[1])
+        migration_files.push(filename)
+      end
+    end
+
+    migration_files.sort.reverse # sort and reverse to ensure the migrations are executed chronologically (backwards)
+  end
+
   def self.get_applied_migrations ()
     # run the query
-    results = @db_connection.exec("SELECT * FROM #{@migration_table}")
+    results = @db_connection.exec("SELECT * FROM #{@migration_table} ORDER BY #{@migration_field} asc")
 
     applied_migrations = {}
     puts "---------------------------------"
@@ -98,13 +143,28 @@ module NandoMigrator
     return applied_migrations
   end
 
+  def self.get_migrations_to_revert (count)
+    # run the query
+    results = @db_connection.exec("SELECT * FROM #{@migration_table} ORDER BY #{@migration_field} desc LIMIT #{count}")
+
+    migrations_to_rollback = []
+    puts "---------------------------------"
+    puts "Rollbacked migrations:"
+    results.each{ |row|
+      puts "#{row[@migration_field]}"
+      migrations_to_rollback.push(row[@migration_field])
+    }
+    puts "---------------------------------"
+    return migrations_to_rollback
+  end
+
   def self.execute_migration_method (method, filename, migration_name, migration_version)
     if method == :up
       migrating = true
     else
       migrating = false
     end
-    
+
     puts migrating ? "Applying: #{filename}" : "Reverting: #{filename}"
 
     require "./#{@migration_dir}/#{filename}"
@@ -117,11 +177,11 @@ module NandoMigrator
     update_migration_table(migration_version, migrating)
   end
 
-  def self.update_migration_table (version, to_apply = true) 
+  def self.update_migration_table (version, to_apply = true)
     if to_apply
-      @db_connection.exec("INSERT INTO #{@migration_table} (#{@migration_field}) VALUES (#{version})") 
+      @db_connection.exec("INSERT INTO #{@migration_table} (#{@migration_field}) VALUES (#{version})")
     else
-      @db_connection.exec("DELETE FROM #{@migration_table} WHERE #{@migration_field} = '#{version}'") 
+      @db_connection.exec("DELETE FROM #{@migration_table} WHERE #{@migration_field} = '#{version}'")
     end
   end
 
