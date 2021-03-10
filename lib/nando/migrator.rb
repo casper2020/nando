@@ -17,8 +17,7 @@ module NandoMigrator
     migration_file_name = "#{migration_timestamp}_#{migration_name}"
     migration_file_path = "#{@migration_dir}/#{migration_file_name}.rb"
 
-    create_migration_file(migration_file_path)
-    puts "Creating a new migration: #{migration_file_path}"
+    MigrationGenerator::create_migration_file(migration_file_path, migration_name)
   end
 
   # migrates all missing migrations
@@ -79,17 +78,6 @@ module NandoMigrator
   # TODO: might add a migrate:down to distinguish from rollback, similarly to ActiveRecord
 
   # --------------------------------------------------------
-
-  def self.create_migration_file (filepath)
-    dir = File.dirname(filepath)
-
-    if !File.directory?(dir)
-      STDERR.puts %Q[No directory "#{dir}" was found.]
-      exit 3
-    end
-
-    File.new(filepath, 'w')
-  end
 
   def self.get_migration_files (directory)
     files = Dir.children(directory)
