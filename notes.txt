@@ -23,6 +23,11 @@ To rollback the database:
 ./bin/rollback
 
 
+Might need to add:
+ - erb
+ 
+
+
 TEMPORARY NOTES
 
 
