@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+
+require "bundler/setup"
+require "nando"
+require "optparse"
+
+options = {}
+
+gem_spec = Gem::Specification::load("nando.gemspec")
+
+parser = OptionParser.new do |opt|
+  opt.banner = "Usage \"#{gem_spec.name} [options]\""
+  opt.define_head gem_spec.summary
+
+  opt.separator ""
+
+
+
+  # opt.on("-n", "--name [VALUE]", String) do |name|
+  #   options[:name] = name
+  # end
+
+  # opt.separator ""
+
+  # opt.on("-h", "--help", "Show this message") do |date|
+  #   puts opt
+  #   exit
+  # end
+end
+
+begin
+  parser.parse!
+
+  p options
+  p ARGV
+  # NandoMigrator.new_migration(options)
+rescue OptionParser::InvalidArgument => e
+  STDERR.puts %Q[#{e.message.capitalize}. Run "#{File.basename($0)} --help" for details.]
+  exit 1
+rescue KeyError
+  STDERR.puts %Q[Insufficient arguments. Run "#{File.basename($0)} --help" for details.]
+  exit 2
+end
