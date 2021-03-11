@@ -8,32 +8,48 @@ options = {}
 
 gem_spec = Gem::Specification::load("nando.gemspec")
 
+# nando [up|down|new] [options]
+
 parser = OptionParser.new do |opt|
   opt.banner = "Usage \"#{gem_spec.name} [options]\""
   opt.define_head gem_spec.summary
 
   opt.separator ""
 
-
+  opt.on("-t", "--type [VALUE]", String) do |type|
+    options[:type] = type
+  end
 
   # opt.on("-n", "--name [VALUE]", String) do |name|
   #   options[:name] = name
   # end
 
-  # opt.separator ""
+  opt.separator ""
 
-  # opt.on("-h", "--help", "Show this message") do |date|
-  #   puts opt
-  #   exit
-  # end
+  opt.on("-h", "--help", "Show this message") do |value|
+    puts opt
+    exit
+  end
 end
 
 begin
   parser.parse!
 
-  p options
-  p ARGV
-  # NandoMigrator.new_migration(options)
+  # p options
+  # p ARGV
+  action = ARGV.shift()
+  case action
+  when 'up'
+    NandoMigrator.migrate()
+  when 'down'
+    NandoMigrator.rollback()
+  when 'new'
+    NandoMigrator.new_migration(options)
+  else
+    STDERR.puts %Q[Invalid command "#{ARGV[0]}". Run "#{File.basename($0)} --help" for details.]
+    exit 3
+  end
+
 rescue OptionParser::InvalidArgument => e
   STDERR.puts %Q[#{e.message.capitalize}. Run "#{File.basename($0)} --help" for details.]
   exit 1
