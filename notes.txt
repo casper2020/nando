@@ -25,6 +25,8 @@ To rollback the database:
 
 Might need to add:
  - erb
+ - optparse
+ - dotenv
  
 
 

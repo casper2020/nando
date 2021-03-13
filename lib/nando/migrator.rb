@@ -1,11 +1,27 @@
 require 'pg'
+require "dotenv"
+
+Dotenv.load('.env')
 
 module NandoMigrator
 
-  # TODO: change later to env file
-  @migration_table = 'schema_migrations'
-  @migration_field = 'version'
-  @migration_dir = 'db/migrate'
+  def self.read_env_file
+    @migration_table = ENV['MIGRATION_TABLE_NAME'] || 'schema_migrations'
+    @migration_field = ENV['MIGRATION_TABLE_FIELD'] || 'version'
+    @migration_dir   = ENV['MIGRATION_DIR'] || 'db/migrate'
+
+    # accepts urls in the same format as dbmate => protocol://username:password@host:port/database_name
+    match = /([a-zA-Z]+)\:\/\/(\w+)\:(\w+)\@([\w\.]+)\:(\d+)\/(\w+)/.match(ENV['DATABASE_URL'])
+
+    @db_protocol = match[1]
+    @db_username = match[2]
+    @db_password = match[3]
+    @db_host = match[4]
+    @db_port = match[5]
+    @db_name = match[6]
+  end
+
+  read_env_file()
 
   # --------------------------------------------------------
 
@@ -186,16 +202,14 @@ module NandoMigrator
   end
 
   def self.get_database_connection
-    # TODO: redo this to use dynamic parameters from a .env file
-    conn = PGconn.connect( :hostaddr=>"127.0.0.1", :port=>5432, :dbname=>"tests_diss", :user=>"toconline")
+    conn = PGconn.connect(:hostaddr => @db_host,
+                          :port => @db_port,
+                          :dbname => @db_name,
+                          :user=> @db_username)
   end
 
 end
 
-
-# module Nando
-#   class Error < StandardError; end
-# end
 
 class String
   # used to convert to snake case (Rails)
