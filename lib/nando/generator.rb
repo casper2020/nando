@@ -3,7 +3,7 @@ require 'erb'
 module MigrationGenerator
 
   # creates the actual migration file
-  def self.create_migration_file (filepath, migration_name)
+  def self.create_migration_file (filepath, migration_name, migration_type)
     dir = File.dirname(filepath)
 
     if !File.directory?(dir)
@@ -11,11 +11,17 @@ module MigrationGenerator
       exit 3
     end
 
+    case migration_type
+    when Nando::Migration.name.demodulize
+      template_file_name = 'migration'
+    when Nando::MigrationWithoutTransaction.name.demodulize
+      template_file_name = 'migration_without_transaction'
+    end
+
     migration_class_name = migration_name.camelize()
     file = File.new(filepath, 'w')
-    # TODO: distinguish between Migration and MigrationWithoutTransaction
     # TODO: check if binding logic is correct, and if pathing changes when it's a gem
-    render_to_file('lib/nando/templates/migration.rb', binding, file)
+    render_to_file("lib/nando/templates/#{template_file_name}.rb", binding, file)
 
     puts "Creating a new migration: #{filepath}"
   end

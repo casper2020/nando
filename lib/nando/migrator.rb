@@ -26,18 +26,21 @@ module NandoMigrator
   # --------------------------------------------------------
 
   # creates a new migration for the tool
-  def self.new_migration (args = {})
-    migration_name = args.fetch(:name).underscore
+  def self.new_migration (options = {}, args = [])
+    migration_name = args[0].underscore
+    migration_type = options[:type] || Nando::Migration.name # default type is migration with transaction
     migration_timestamp = Time.now.strftime("%Y%m%d%H%M%S") # same format as ActiveRecord: year-month-day-hour-minute-second
+
+    final_migration_type = camelize_migration_type(migration_type)
 
     migration_file_name = "#{migration_timestamp}_#{migration_name}"
     migration_file_path = "#{@migration_dir}/#{migration_file_name}.rb"
 
-    MigrationGenerator::create_migration_file(migration_file_path, migration_name)
+    MigrationGenerator::create_migration_file(migration_file_path, migration_name, final_migration_type)
   end
 
   # migrates all missing migrations
-  def self.migrate (args = {})
+  def self.migrate (options = {})
     puts "Migrating!"
 
     migration_files = get_migration_files(@migration_dir)
@@ -63,7 +66,7 @@ module NandoMigrator
   end
 
   # rollbacks 1 migration (or more depending on argument)
-  def self.rollback (args = {})
+  def self.rollback (options = {})
     puts "Rollback!"
 
     rollback_count = 1 # TODO: temporary constant, add option in command interface
@@ -189,6 +192,14 @@ module NandoMigrator
     end
   end
 
+  def self.camelize_migration_type (migration_type)
+    camelize_migration_type = migration_type.camelize
+    if !['Migration', 'MigrationWithoutTransaction'].include?(camelize_migration_type)
+      raise Nando::MigrationTypeError.new(migration_type) # sending the input value as the error, for easier understanding of the problem for users
+    end
+    return camelize_migration_type
+  end
+
   def self.get_migration_version_and_name (filename)
     match = /^(\d+)\_(.*)\.rb/.match(filename)
     migration_version = match[1] # by this point, a filename has already been validated, so I don't need to double check
@@ -222,7 +233,7 @@ class String
   end
 
   # used to convert to camel or Pascal case (Rails)
-  def camelize(uppercase_first_letter = true)
+  def camelize (uppercase_first_letter = true)
     string = self
     if uppercase_first_letter
       string = string.sub(/^[a-z\d]*/) { |match| match.capitalize }
@@ -230,5 +241,10 @@ class String
       string = string.sub(/^(?:(?=\b|[A-Z_])|\w)/) { |match| match.downcase }
     end
     string.gsub(/(?:_|(\/))([a-z\d]*)/) { "#{$1}#{$2.capitalize}" }.gsub("/", "::")
+  end
+
+  # gets the class/module name with the previous class/module names
+  def demodulize
+    self.split('::').last
   end
 end

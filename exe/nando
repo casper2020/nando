@@ -35,8 +35,6 @@ end
 begin
   parser.parse!
 
-  # p options
-  # p ARGV
   action = ARGV.shift()
   case action
   when 'up'
@@ -44,7 +42,10 @@ begin
   when 'down'
     NandoMigrator.rollback()
   when 'new'
-    NandoMigrator.new_migration(options)
+    if ARGV[0].nil?
+      raise KeyError # ARGV[0] is the new migration name
+    end
+    NandoMigrator.new_migration(options, ARGV)
   else
     STDERR.puts %Q[Invalid command "#{ARGV[0]}". Run "#{File.basename($0)} --help" for details.]
     exit 3
@@ -55,5 +56,8 @@ rescue OptionParser::InvalidArgument => e
   exit 1
 rescue KeyError
   STDERR.puts %Q[Insufficient arguments. Run "#{File.basename($0)} --help" for details.]
+  exit 2
+rescue Nando::MigrationTypeError => e
+  STDERR.puts %Q[Invalid migration type "#{e}". Run "#{File.basename($0)} --help" for details.]
   exit 2
 end
