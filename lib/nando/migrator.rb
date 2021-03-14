@@ -217,10 +217,10 @@ module NandoMigrator
   end
 
   def self.get_database_connection
-    conn = PGconn.connect(:hostaddr => @db_host,
-                          :port => @db_port,
-                          :dbname => @db_name,
-                          :user=> @db_username)
+    conn = PG::Connection.open(:hostaddr => @db_host,
+                               :port => @db_port,
+                               :dbname => @db_name,
+                               :user=> @db_username)
   end
 
 end
