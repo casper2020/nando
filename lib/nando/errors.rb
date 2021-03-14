@@ -4,4 +4,10 @@ module Nando
       super
     end
   end
+
+  class MigratingError < StandardError
+    def initialize (error)
+      super
+    end
+  end
 end

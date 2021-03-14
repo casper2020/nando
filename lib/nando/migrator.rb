@@ -28,7 +28,7 @@ module NandoMigrator
   # creates a new migration for the tool
   def self.new_migration (options = {}, args = [])
     migration_name = args[0].underscore
-    migration_type = options[:type] || Nando::Migration.name # default type is migration with transaction
+    migration_type = options[:type] || Nando::Migration.name.demodulize # default type is migration with transaction
     migration_timestamp = Time.now.strftime("%Y%m%d%H%M%S") # same format as ActiveRecord: year-month-day-hour-minute-second
 
     final_migration_type = camelize_migration_type(migration_type)
@@ -180,7 +180,11 @@ module NandoMigrator
 
     migration_class = class_const.new()
     migration_class.set_connection(@db_connection)
-    migration_class.send(method)
+    begin
+      migration_class.execute_migration(method)
+    rescue => exception
+      raise Nando::MigratingError.new(exception)
+    end
     update_migration_table(migration_version, migrating)
   end
 
