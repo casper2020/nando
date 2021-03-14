@@ -12,16 +12,16 @@ module Nando
     end
 
     def execute_migration (method)
-      puts 'MIGRATION'
-      @db_connection.exec('BEGIN')
+      # puts 'MIGRATION'
+      # @db_connection.exec('BEGIN')
       self.send(method)
-      @db_connection.exec('COMMIT')
+      # @db_connection.exec('COMMIT')
     end
   end
 
   class MigrationWithoutTransaction < Migration
     def execute_migration (method)
-      puts 'WITHOUT TRANSACTION'
+      # puts 'WITHOUT TRANSACTION'
       self.send(method)
     end
   end
