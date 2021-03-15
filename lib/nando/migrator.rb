@@ -96,6 +96,14 @@ module NandoMigrator
 
   # TODO: might add a migrate:down to distinguish from rollback, similarly to ActiveRecord
 
+  # parses migrations from dbmate to nando
+  def self.parse (options = {}, args = [])
+    # TODO: removed hardcoded paths and add restriction to parse call
+    source_path = '/Users/falves/work/cloudware-central-db/db/migrations'
+    destination_path = '/Users/falves/feup/diss/nando/db/migrations'
+    NandoParser.parse_from_dbmate(source_path, destination_path)
+  end
+
   # --------------------------------------------------------
 
   def self.get_migration_files (directory)

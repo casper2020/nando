@@ -46,6 +46,11 @@ begin
       raise KeyError # ARGV[0] is the new migration name
     end
     NandoMigrator.new_migration(options, ARGV)
+  when 'parse'
+    if ARGV[0].nil? || ARGV[1].nil?
+      # raise KeyError # TODO: uncomment this for final version
+    end
+    NandoMigrator.parse(options, ARGV)
   else
     STDERR.puts %Q[Invalid command "#{ARGV[0]}". Run "#{File.basename($0)} --help" for details.]
     exit 3
