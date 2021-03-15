@@ -41,7 +41,7 @@ module NandoMigrator
 
   # migrates all missing migrations
   def self.migrate (options = {})
-    puts "Migrating!"
+    # puts "Migrating!"
 
     migration_files = get_migration_files(@migration_dir)
 
@@ -51,6 +51,7 @@ module NandoMigrator
     end
 
     @db_connection = get_database_connection()
+    create_schema_migrations_table_if_not_exists()
     applied_migrations = get_applied_migrations()
 
     for filename in migration_files do
@@ -67,11 +68,12 @@ module NandoMigrator
 
   # rollbacks 1 migration (or more depending on argument)
   def self.rollback (options = {})
-    puts "Rollback!"
+    # puts "Rollback!"
 
     rollback_count = 1 # TODO: temporary constant, add option in command interface
 
     @db_connection = get_database_connection()
+    create_schema_migrations_table_if_not_exists()
     migrations_to_revert = get_migrations_to_revert(rollback_count)
 
     if migrations_to_revert.length == 0
@@ -148,13 +150,13 @@ module NandoMigrator
     results = @db_connection.exec("SELECT * FROM #{@migration_table} ORDER BY #{@migration_field} asc")
 
     applied_migrations = {}
-    puts "---------------------------------"
-    puts "Applied migrations:"
+    # puts "---------------------------------"
+    # puts "Applied migrations:"
     results.each{ |row|
-      puts "#{row[@migration_field]}"
+      # puts "#{row[@migration_field]}"
       applied_migrations[row[@migration_field]] = true
     }
-    puts "---------------------------------"
+    # puts "---------------------------------"
     return applied_migrations
   end
 
@@ -163,13 +165,13 @@ module NandoMigrator
     results = @db_connection.exec("SELECT * FROM #{@migration_table} ORDER BY #{@migration_field} desc LIMIT #{count}")
 
     migrations_to_rollback = []
-    puts "---------------------------------"
-    puts "Rollbacked migrations:"
+    # puts "---------------------------------"
+    # puts "Rollbacked migrations:"
     results.each{ |row|
-      puts "#{row[@migration_field]}"
+      # puts "#{row[@migration_field]}"
       migrations_to_rollback.push(row[@migration_field])
     }
-    puts "---------------------------------"
+    # puts "---------------------------------"
     return migrations_to_rollback
   end
 
@@ -222,6 +224,21 @@ module NandoMigrator
   def self.get_migration_class (filename)
     name = filename.camelize
     Object.const_defined?(name) ? Object.const_get(name) : Object.const_missing(name) # if the constant does not exist, raise error
+  end
+
+  def self.create_schema_migrations_table_if_not_exists
+    results = @db_connection.exec("SELECT EXISTS (
+      SELECT FROM information_schema.tables
+       WHERE table_schema = 'public'
+         AND table_name = '#{@migration_table}')")
+
+    if results[0]["exists"] == 'f'
+      puts "Table \"#{@migration_table}\" does not exist, creating one"
+      @db_connection.exec("CREATE TABLE public.#{@migration_table} (
+        #{@migration_field}     VARCHAR(255) PRIMARY KEY,
+        executed_at             timestamp DEFAULT NOW()
+      )")
+    end
   end
 
   def self.get_database_connection
