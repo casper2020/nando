@@ -68,4 +68,9 @@ rescue Nando::MigrationTypeError => e
 rescue Nando::MigratingError => e
   STDERR.puts e
   exit 2
+
+# default rescue
+rescue => e
+  STDERR.puts e
+  exit 2
 end
