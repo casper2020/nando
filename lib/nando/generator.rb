@@ -21,7 +21,7 @@ module MigrationGenerator
     migration_class_name = migration_name.camelize()
     file = File.new(filepath, 'w')
     # TODO: check if binding logic is correct, and if pathing changes when it's a gem
-    render_to_file("lib/nando/templates/#{template_file_name}.rb", binding, file)
+    render_to_file(File.join(File.dirname(File.expand_path(__FILE__)), "templates/#{template_file_name}.rb"), binding, file)
 
     puts "Creating a new migration: #{filepath}"
   end

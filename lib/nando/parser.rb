@@ -48,7 +48,7 @@ module NandoParser
       migration_up_code = up_method
       migration_down_code = down_method
       # TODO: check if binding logic is correct, and if pathing changes when it's a gem
-      MigrationGenerator.render_to_file("lib/nando/parser_templates/migration.rb", binding, new_file)
+      MigrationGenerator.render_to_file(File.join(File.dirname(File.expand_path(__FILE__)), 'parser_templates/migration.rb'), binding, new_file)
     end
 
     dest_files = Dir.children(destination_path)

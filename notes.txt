@@ -5,8 +5,9 @@ bundle exec rspec spec
 
 To test in irb:
 
-gem build nando.gemspec 
+gem build nando.gemspec
 gem install nando-0.1.0.gem
+gem install --local nando-0.1.0.gem
 irb
 
 
@@ -27,7 +28,7 @@ Might need to add:
  - erb
  - optparse
  - dotenv
- 
+
 
 
 TEMPORARY NOTES

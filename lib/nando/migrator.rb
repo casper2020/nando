@@ -100,10 +100,7 @@ module NandoMigrator
 
   # parses migrations from dbmate to nando
   def self.parse (options = {}, args = [])
-    # TODO: removed hardcoded paths and add restriction to parse call
-    source_path = '/Users/falves/work/cloudware-central-db/db/migrations'
-    destination_path = '/Users/falves/feup/diss/nando/db/migrations'
-    NandoParser.parse_from_dbmate(source_path, destination_path)
+    NandoParser.parse_from_dbmate(args[0], args[1])
   end
 
   # --------------------------------------------------------

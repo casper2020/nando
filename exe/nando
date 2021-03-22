@@ -6,7 +6,7 @@ require "optparse"
 
 options = {}
 
-gem_spec = Gem::Specification::load("nando.gemspec")
+gem_spec = Gem::Specification.find_by_name('nando') # TODO: loading Gem specification by name, there might be a better way
 
 # nando [up|down|new] [options]
 
@@ -19,10 +19,6 @@ parser = OptionParser.new do |opt|
   opt.on("-t", "--type [VALUE]", String) do |type|
     options[:type] = type
   end
-
-  # opt.on("-n", "--name [VALUE]", String) do |name|
-  #   options[:name] = name
-  # end
 
   opt.separator ""
 
@@ -48,7 +44,7 @@ begin
     NandoMigrator.new_migration(options, ARGV)
   when 'parse'
     if ARGV[0].nil? || ARGV[1].nil?
-      # raise KeyError # TODO: uncomment this for final version
+      raise KeyError
     end
     NandoMigrator.parse(options, ARGV)
   else
@@ -66,11 +62,6 @@ rescue Nando::MigrationTypeError => e
   STDERR.puts %Q[Invalid migration type "#{e}". Run "#{File.basename($0)} --help" for details.]
   exit 2
 rescue Nando::MigratingError => e
-  STDERR.puts e
-  exit 2
-
-# default rescue
-rescue => e
   STDERR.puts e
   exit 2
 end
