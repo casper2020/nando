@@ -31,10 +31,10 @@ module NandoParser
             with_transaction = false if match[1].include?('transaction:false')
             current_section = 'down'
           else
-            up_method += "      #{line}"
+            up_method += "      #{line}".rstrip + "\n"
           end
         when 'down'
-          down_method += "      #{line}"
+          down_method += "      #{line}".rstrip + "\n"
         else
           if match = /--\smigrate:up(.*)/.match(line)
             with_transaction = false if match[1].include?('transaction:false')
