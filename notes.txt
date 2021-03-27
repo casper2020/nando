@@ -30,6 +30,20 @@ Might need to add:
  - dotenv
 
 
+To fix CDB migration
+ALTER TYPE casper.chore_template_id ADD VALUE IF NOT EXISTS 'ppc-irs-payment';
+
+
+\c toc_recon
+drop database new_tests_diss;
+create database new_tests_diss;
+\c new_tests_diss
+
+
+# @db_connection.exec('BEGIN')
+# @db_connection.exec('COMMIT')
+
+
 
 TEMPORARY NOTES
 

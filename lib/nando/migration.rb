@@ -12,10 +12,13 @@ module Nando
     end
 
     def execute_migration (method)
-      # TODO: review this is the best way of creating a transaction (there might be a method in 'pg')
-      @db_connection.exec('BEGIN')
-      self.send(method)
-      @db_connection.exec('COMMIT')
+      # TODO: review this is the best way of creating a transaction (don't know if re-assigning connections has weird behaviours)
+      old_connection = @db_connection
+      @db_connection.transaction do |conn|
+        @db_connection = conn
+        self.send(method)
+      end
+      @db_connection = old_connection
     end
   end
 
