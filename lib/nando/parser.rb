@@ -43,6 +43,7 @@ module NandoParser
         end
       end
 
+      # binding
       migration_class_name = migration_name.camelize
       migration_type = with_transaction ? Nando::Migration.name.demodulize : Nando::MigrationWithoutTransaction.name.demodulize
       migration_up_code = up_method
