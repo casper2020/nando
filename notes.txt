@@ -45,6 +45,11 @@ drop database if exists test_nando_1;
 create database test_nando_1;
 \c test_nando_1
 
+\c toc_recon
+drop database if exists test_nando_cdb;
+create database test_nando_cdb;
+\c test_nando_cdb
+
 
 # @db_connection.exec('BEGIN')
 # @db_connection.exec('COMMIT')

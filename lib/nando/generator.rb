@@ -66,6 +66,7 @@ module MigrationGenerator
     ")
 
     up_method = ''
+    number_of_functions = 0
     indent = '    '
     # TODO: try to indent the functions correctly
     for row in results do
@@ -73,9 +74,8 @@ module MigrationGenerator
       up_method += "\n" + indent + "update_function <<-'SQL'\n"
       up_method += "#{row['definition']}"
       up_method += "\n" + indent + "SQL\n"
+      number_of_functions += 1
     end
-
-    down_method = indent + "# #{results.length} functions have been added to this baseline"
 
     new_file = File.new(filepath, 'w')
 
@@ -83,7 +83,7 @@ module MigrationGenerator
     migration_class_name = migration_name.camelize
     migration_type = Nando::Migration.name.demodulize # TODO: atm all baseline files are create as migrations with transactions, this might change later
     migration_up_code = up_method
-    migration_down_code = down_method
+    migration_down_code = indent + "# #{number_of_functions} functions have been added to this baseline"
 
     render_to_file(File.join(File.dirname(File.expand_path(__FILE__)), 'baseline_templates/migration.rb'), binding, new_file)
 
