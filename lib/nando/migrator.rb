@@ -1,5 +1,6 @@
 require 'pg'
-require "dotenv"
+require 'dotenv'
+require 'byebug'
 
 Dotenv.load('.env')
 
@@ -101,6 +102,32 @@ module NandoMigrator
   # parses migrations from dbmate to nando
   def self.parse (options = {}, args = [])
     NandoParser.parse_from_dbmate(args[0], args[1])
+  end
+
+  def self.setup ()
+    puts 'SETUP'
+
+    @db_connection = get_database_connection();
+    results = @db_connection.exec("
+      SELECT n.nspname AS function_schema,
+             p.proname AS function_name,
+             l.lanname AS function_language,
+             CASE WHEN l.lanname = 'internal' THEN p.prosrc ELSE pg_get_functiondef(p.oid) END AS definition,
+             pg_get_function_arguments(p.oid) AS function_arguments,
+             t.typname AS return_type,
+             p.proowner AS p_owner
+        FROM pg_proc p
+        LEFT JOIN pg_namespace n ON p.pronamespace = n.oid
+        LEFT JOIN pg_language l ON p.prolang = l.oid
+        LEFT JOIN pg_type t ON t.oid = p.prorettype
+       WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+       ORDER BY function_schema, function_name
+    ")
+
+    # puts results[0]
+
+    # debugger
+
   end
 
   # --------------------------------------------------------

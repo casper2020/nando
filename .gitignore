@@ -15,3 +15,5 @@ nando*.gem
 
 # test db/migrate folder (may remove later
 /db/
+
+.byebug_history

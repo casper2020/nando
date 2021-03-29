@@ -47,6 +47,8 @@ begin
       raise KeyError
     end
     NandoMigrator.parse(options, ARGV)
+  when 'setup'
+    NandoMigrator.setup()
   else
     STDERR.puts %Q[Invalid command "#{ARGV[0]}". Run "#{File.basename($0)} --help" for details.]
     exit 3
