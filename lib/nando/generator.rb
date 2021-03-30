@@ -1,8 +1,4 @@
 require 'erb'
-begin
-  require 'byebug'
-rescue LoadError
-end
 
 module MigrationGenerator
 

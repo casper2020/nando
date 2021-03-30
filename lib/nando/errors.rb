@@ -10,4 +10,10 @@ module Nando
       super
     end
   end
+
+  class GenericError < StandardError
+    def initialize (error)
+      super
+    end
+  end
 end

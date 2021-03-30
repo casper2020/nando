@@ -49,8 +49,13 @@ begin
     NandoMigrator.parse(options, ARGV)
   when 'baseline'
     NandoMigrator.baseline()
+  when 'update'
+    if ARGV[0].nil?
+      raise KeyError # ARGV[0] is the new migration file
+    end
+    NandoMigrator.update_migration(options, ARGV)
   else
-    STDERR.puts %Q[Invalid command "#{ARGV[0]}". Run "#{File.basename($0)} --help" for details.]
+    STDERR.puts %Q[Invalid command "#{action}". Run "#{File.basename($0)} --help" for details.]
     exit 3
   end
 
@@ -64,6 +69,9 @@ rescue Nando::MigrationTypeError => e
   STDERR.puts %Q[Invalid migration type "#{e}". Run "#{File.basename($0)} --help" for details.]
   exit 2
 rescue Nando::MigratingError => e
+  STDERR.puts e
+  exit 2
+rescue Nando::GenericError => e
   STDERR.puts e
   exit 2
 end

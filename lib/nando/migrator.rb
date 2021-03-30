@@ -24,6 +24,8 @@ module NandoMigrator
     @db_host = match[4]
     @db_port = match[5]
     @db_name = match[6]
+
+    @working_dir = '.' # TODO: add env variable for this
   end
 
   read_env_file()
@@ -118,6 +120,12 @@ module NandoMigrator
     migration_file_path = "#{@migration_dir}/#{migration_file_name}.rb"
 
     MigrationGenerator::create_baseline_file(migration_file_path, migration_name)
+  end
+
+  def self.update_migration (options = {}, args = [])
+    puts 'UPDATING'
+
+    MigrationUpdater.update_migration(args[0], @working_dir)
   end
 
   # --------------------------------------------------------
