@@ -56,6 +56,15 @@ create database test_nando_cdb;
 
 
 
+# Calling logger methods
+
+_warn 'TESTING'
+_debug 'TESTING'
+_error 'TESTING'
+_success 'TESTING'
+_info 'TESTING'
+
+
 TEMPORARY NOTES
 
 

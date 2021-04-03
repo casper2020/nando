@@ -65,10 +65,7 @@ module MigrationUpdater
 
     if do_another_loop
       unless starting_sql_index.nil? && ending_sql_index.nil?
-        # whoami = %x[whoami].strip()
-        # new_file = "/Users/#{whoami}/work/" + line_match[2];
         curr_source_file = "#{@working_directory}/#{line_match[2]}"
-        puts curr_source_file;
 
         if File.file?(curr_source_file)
           # delete from array lines for current update_function block (if there is any)
@@ -93,13 +90,9 @@ module MigrationUpdater
 
           @last_scanned_index = starting_sql_index + curr_file_lines.length - 1
           @changed_file = true
-          # print "SUCCESS: ".green.bold
-          # print "UPDATED CONTENT FOR #{new_file}\n"
-          puts "Updated content for #{curr_source_file}\n"
+          _success "Updated content for #{curr_source_file}"
         else
-          # print "WARNING: ".yellow.bold
-          # print "COULDNT FIND FILE: #{new_file}\n"
-          # print "SKIPPING THAT ONE.\n".light_yellow
+          _warn "Couldn't find file: #{curr_source_file} => Skipping that one!"
         end
       end
       find_and_update()

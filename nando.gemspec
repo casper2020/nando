@@ -44,4 +44,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "pg", "~> 1.2.3"
   spec.add_dependency "optparse", "~> 0.1.0"
   spec.add_dependency "dotenv", "~> 2.7.6"
+  spec.add_dependency "colorize", "~> 0.8.1"
 end

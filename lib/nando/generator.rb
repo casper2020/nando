@@ -66,7 +66,6 @@ module MigrationGenerator
     indent = '    '
     # TODO: try to indent the functions correctly
     for row in results do
-      # up_method += "\n" + indent + "# NANDO: <TODO: should the baseline have the path to the file already?>"
       up_method += "\n" + indent + "update_function <<-'SQL'\n"
       up_method += "#{row['definition']}"
       up_method += "\n" + indent + "SQL\n"

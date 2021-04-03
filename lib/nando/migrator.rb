@@ -48,7 +48,7 @@ module NandoMigrator
 
   # migrates all missing migrations
   def self.migrate (options = {})
-    # puts "Migrating!"
+    _debug 'Migrating!'
 
     migration_files = get_migration_files(@migration_dir)
 
@@ -75,7 +75,7 @@ module NandoMigrator
 
   # rollbacks 1 migration (or more depending on argument)
   def self.rollback (options = {})
-    # puts "Rollback!"
+    _debug 'Rollback!'
 
     rollback_count = 1 # TODO: temporary constant, add option in command interface
 
@@ -107,11 +107,13 @@ module NandoMigrator
 
   # parses migrations from dbmate to nando
   def self.parse (options = {}, args = [])
+    _debug 'Parsing!'
+
     NandoParser.parse_from_dbmate(args[0], args[1])
   end
 
   def self.baseline ()
-    # puts 'BASELINE'
+    _debug 'Creating Baseline!'
 
     migration_name = "baseline".underscore
     migration_timestamp = Time.now.strftime("%Y%m%d%H%M%S") # same format as ActiveRecord: year-month-day-hour-minute-second
@@ -123,7 +125,7 @@ module NandoMigrator
   end
 
   def self.update_migration (options = {}, args = [])
-    puts 'UPDATING'
+    _debug 'Updating!'
 
     MigrationUpdater.update_migration(args[0], @working_dir)
   end
