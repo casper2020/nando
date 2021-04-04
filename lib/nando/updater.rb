@@ -47,7 +47,7 @@ module MigrationUpdater
         annotation_file = line_match[2]
 
         if @source_files_copied.include?(annotation_file)
-          _warn "The file '#{annotation_file}' has already been updated in the current migration. Skipping!"
+          _warn "The file '#{annotation_file}' has already been updated in the current migration, remove the duplicate annotation! Skipping!"
           duplicate_annotation = true
           break
         else
@@ -101,13 +101,13 @@ module MigrationUpdater
           @lines.insert(starting_sql_index, *curr_file_lines)
 
           # TODO: create/update the equivalent DOWN => have a similiar directive in the down method, with the path as well, to allow for "easy" matching (?)
-          find_and_update_respective_down_directive(annotation_file)
+          find_and_update_respective_down_directive(annotation_file, line_match[1])
 
           @last_scanned_index = starting_sql_index + curr_file_lines.length - 1
           @changed_file = true
           _success "Updated content for #{curr_source_file}"
         else
-          _warn "Couldn't find file: '#{curr_source_file}' => Skipping that one!"
+          _warn "Couldn't find file: '#{curr_source_file}'! Skipping that one!"
         end
       end
       find_and_update()
@@ -115,7 +115,7 @@ module MigrationUpdater
 
   end
 
-  def self.find_and_update_respective_down_directive (source_file_path)
+  def self.find_and_update_respective_down_directive (source_file_path, indent_space)
     # if a NANDO directive is being updated, then we need to find the respetive down (X)
     # start from the top of the file, try and find the directive (may try to optmize this later, to start at "def down") (X)
     # if the directive is found, update it.
@@ -138,7 +138,7 @@ module MigrationUpdater
       if down_method_index.nil?
         line_match = line.match(down_method_trigger)
         if !line_match.nil?
-          _debug 'Found down method'
+          # _debug 'Found beginning of down method'
           down_method_index = line_index
           down_method_indent = line_match[1]
           down_method_end_trigger = "^(?:#{line_match[1]}end).*"
@@ -151,35 +151,15 @@ module MigrationUpdater
 
       # found a annotation that has not been updated
       if !line_match.nil?
-        _debug 'FOUND MATCH'
-        break
+        # _debug "Found matching annotation for: '#{source_file_path}'"
         down_annotation_index = line_index
-        # find beginning of block
-        if execute_match = @lines[line_index+1].match("(.*)update_function(.*)SQL(.*)\n")
-          starting_sql_index = line_index + 1
-          ending_trigger = execute_match[1] + 'SQL' + "\n"
-
-          # find ending of block
-          for ending_block_index in line_index+2..@lines.length-1 do
-            if ending_execute_match = @lines[ending_block_index].match(ending_trigger)
-              ending_sql_index = ending_block_index
-              break
-            end
-          end
-        # we need to create an update_function block, since one does not exist
-        else
-          starting_sql_index = line_index + 1
-          ending_sql_index = starting_sql_index - 1
-          prepend_append_execute = true
-        end
         break
       end
     end
 
     # no annotation found, create one
     if down_annotation_index.nil?
-      # create annotation
-      _debug 'DID NOT FIND MATCH'
+      # _debug "Did not find respective down annotation for: '#{source_file_path}'"
 
       @lines.each_with_index do |line, line_index|
         # ignore before "def down"
@@ -190,9 +170,10 @@ module MigrationUpdater
         # look for the "end" of "def down"
         line_match = line.match(down_method_end_trigger)
         if !line_match.nil?
-          _debug "FOUND END OF DOWN: #{line_index}"
-
-          # TODO: insert annotation here
+          _debug "Found the end of 'def down' at index: #{line_index}"
+          @lines.insert(line_index, "\n") # insert empty line to keep annotations 1 line apart
+          @lines.insert(line_index, indent_space + "# #{down_keyword}: #{source_file_path}\n")
+          break
         end
       end
     end
