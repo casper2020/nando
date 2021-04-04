@@ -101,7 +101,7 @@ module MigrationUpdater
           @lines.insert(starting_sql_index, *curr_file_lines)
 
           # TODO: create/update the equivalent DOWN => have a similiar directive in the down method, with the path as well, to allow for "easy" matching (?)
-          find_and_update_respective_down_directive(annotation_file, line_match[1])
+          find_and_update_respective_down_directive(annotation_file, curr_source_file, line_match[1])
 
           @last_scanned_index = starting_sql_index + curr_file_lines.length - 1
           @changed_file = true
@@ -115,16 +115,16 @@ module MigrationUpdater
 
   end
 
-  def self.find_and_update_respective_down_directive (source_file_path, indent_space)
+  def self.find_and_update_respective_down_directive (source_file, source_file_full_path, indent_space)
     # if a NANDO directive is being updated, then we need to find the respetive down (X)
     # start from the top of the file, try and find the directive (may try to optmize this later, to start at "def down") (X)
     # if the directive is found, update it.
     # if not, create one at the bottom of the file and update it
-    # matching is done using the source_file_path, but the code to fill the down comes from previous migrations (NOT THE FILE)
+    # matching is done using the source_file, but the code to fill the down comes from previous migrations (NOT THE FILE)
 
     down_keyword = 'NANDO_DOWN'
     down_annotation_index = nil
-    down_annotation_trigger = "(\s*)(?:#\s(?:#{down_keyword}:)(?:\s)?)(?:#{source_file_path})" # match 1 is the space to indent
+    down_annotation_trigger = "(\s*)(?:#\s(?:#{down_keyword}:)(?:\s)?)(?:#{source_file})" # match 1 is the space to indent
 
     down_method_index = nil
     down_method_trigger = "(\s*)def(?:\s*)down(.*)"
@@ -151,7 +151,7 @@ module MigrationUpdater
 
       # found a annotation that has not been updated
       if !line_match.nil?
-        # _debug "Found matching annotation for: '#{source_file_path}'"
+        # _debug "Found matching annotation for: '#{source_file}'"
         down_annotation_index = line_index
         break
       end
@@ -159,7 +159,7 @@ module MigrationUpdater
 
     # no annotation found, create one
     if down_annotation_index.nil?
-      # _debug "Did not find respective down annotation for: '#{source_file_path}'"
+      # _debug "Did not find respective down annotation for: '#{source_file}'"
 
       @lines.each_with_index do |line, line_index|
         # ignore before "def down"
@@ -172,13 +172,22 @@ module MigrationUpdater
         if !line_match.nil?
           _debug "Found the end of 'def down' at index: #{line_index}"
           @lines.insert(line_index, "\n") # insert empty line to keep annotations 1 line apart
-          @lines.insert(line_index, indent_space + "# #{down_keyword}: #{source_file_path}\n")
+          @lines.insert(line_index, indent_space + "# #{down_keyword}: #{source_file}\n")
           break
         end
       end
     end
 
-    # update annotation - TODO
+    # update annotation
+
+    source_file_text = File.readlines(source_file_full_path).join(' ')
+    function_info_match = /CREATE (?:OR REPLACE)? FUNCTION (.*)\((.*)\) RETURNS (\w*) AS \$\w*\$/im.match(source_file_text) # case insenstive and multi-line
+
+    # debugger
+
+    # read the NANDO block to understand what is the function (X)
+    # find most recent (previous) migration with a "NANDO: ... update_function" for the same function
+    # extract that block and insert into here
 
   end
 
