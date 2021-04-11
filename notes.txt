@@ -65,6 +65,9 @@ _success 'TESTING'
 _info 'TESTING'
 
 
+grep -i -e "execute <<-([.\n]*)CREATE OR REPLACE FUNCTION common.document_settings_for_print" ./db/migrate/*
+
+
 TEMPORARY NOTES
 
 

@@ -15,6 +15,8 @@ module MigrationUpdater
     @changed_file = false
     @source_files_copied = []
 
+    # TODO: might add a split by '/' in "get_migration_version_and_name" (also won't work on db/dir1/dir2/migration_name.rb)
+    @curr_migration_version, curr_migration_name = NandoMigrator.get_migration_version_and_name(migration_file_path.split('/')[2])
     find_and_update()
 
     if @changed_file
@@ -173,21 +175,112 @@ module MigrationUpdater
           _debug "Found the end of 'def down' at index: #{line_index}"
           @lines.insert(line_index, "\n") # insert empty line to keep annotations 1 line apart
           @lines.insert(line_index, indent_space + "# #{down_keyword}: #{source_file}\n")
+          down_annotation_index = line_index
           break
         end
       end
     end
 
     # update annotation
-
     source_file_text = File.readlines(source_file_full_path).join(' ')
     function_info_match = /CREATE (?:OR REPLACE)? FUNCTION (.*)\((.*)\) RETURNS (\w*) AS \$\w*\$/im.match(source_file_text) # case insenstive and multi-line
 
-    # debugger
+    function_name = function_info_match[1].strip
+    function_args = function_info_match[2].strip
+    function_return = function_info_match[3].strip
 
-    # read the NANDO block to understand what is the function (X)
-    # find most recent (previous) migration with a "NANDO: ... update_function" for the same function
-    # extract that block and insert into here
+    file_regex = "CREATE \\(OR REPLACE\\)\\? FUNCTION #{function_name}"
+
+    files_with_function = %x[grep -irl -e "#{file_regex}" ./db/migrate].split("\n").sort().reverse()
+
+    function_previous_block = nil
+
+    for curr_file_path in files_with_function do
+      # _debug curr_file_path
+
+      if curr_file_path.include?(@curr_migration_version)
+        _debug 'Ignore self while updating'
+        next
+      end
+
+      up_line_index = nil
+      down_line_index = nil
+      function_line_index = nil
+
+      curr_file_lines = File.readlines(curr_file_path)
+
+      # find up, down and line with definition
+      curr_file_lines.each_with_index do |line, line_index|
+        if up_line_index.nil? && line.match(/(?:\s*)def(?:\s*)up/) then up_line_index = line_index; end
+        if down_line_index.nil? && line.match(/(?:\s*)def(?:\s*)down/) then down_line_index = line_index; end
+        if function_line_index.nil? && line.match(/CREATE (?:OR REPLACE)? FUNCTION #{function_name}/i) then function_line_index = line_index; end
+
+        if !up_line_index.nil? && !down_line_index.nil? && !function_line_index.nil?
+          # _debug "Found all 3 lines"
+          break
+        end
+      end
+
+      # _debug "up: #{up_line_index} | down: #{down_line_index} | function: #{function_line_index}"
+
+      # TODO: add some validations over current block
+      # TODO: match function with correct parameters/return value
+      # TODO: isolate into function that extracts block
+
+      block_indent = nil
+      block_start_index = nil
+      block_end_index = nil
+
+      # get block around function
+      for block_line_index in (0..function_line_index).to_a.reverse() do
+        block_line = curr_file_lines[block_line_index]
+        if block_match = block_line.match("(.*)update_function(?:.*)SQL(?:.*)\n")
+          block_indent = block_match[1]
+          block_start_index = block_line_index
+          break
+        end
+      end
+
+      for block_line_index in function_line_index..curr_file_lines.length do
+        block_line = curr_file_lines[block_line_index]
+        if block_match = block_line.match("^#{block_indent}SQL(?:.*)\n")
+          block_end_index = block_line_index
+          break
+        end
+      end
+
+      function_block = []
+      for block_line_index in block_start_index..block_end_index do
+        function_block.push(curr_file_lines[block_line_index])
+      end
+
+      function_previous_block = function_block.join('')
+      break
+
+      # TODO: if no previous def is found, create a annotation with just a drop, maybe? + warning?
+    end
+
+    # erase previous block (if one exists)
+    # TODO: there is similar logic above, maybe resolve to a single function
+    if curr_down_block_start = @lines[down_annotation_index+1].match("(.*)update_function(.*)SQL(.*)\n")
+      ending_trigger = curr_down_block_start[1] + 'SQL' + "\n"
+      starting_sql_index = down_annotation_index + 1
+      ending_sql_index = nil
+
+      # find ending of block
+      for ending_down_block_index in down_annotation_index+2..@lines.length-1 do
+        if ending_execute_match = @lines[ending_down_block_index].match(ending_trigger)
+          ending_sql_index = ending_down_block_index
+          break
+        end
+      end
+
+      # TODO: add protections here if it does not find the end of the block
+      # delete from array lines for current update_function block
+      @lines.slice!(starting_sql_index, (ending_sql_index - starting_sql_index) + 1)
+    end
+
+    @lines.insert(down_annotation_index + 1, function_previous_block)
 
   end
 
