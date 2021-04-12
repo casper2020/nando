@@ -102,7 +102,6 @@ module MigrationUpdater
           end
           @lines.insert(starting_sql_index, *curr_file_lines)
 
-          # TODO: create/update the equivalent DOWN => have a similiar directive in the down method, with the path as well, to allow for "easy" matching (?)
           find_and_update_respective_down_directive(annotation_file, curr_source_file, line_match[1])
 
           @last_scanned_index = starting_sql_index + curr_file_lines.length - 1
@@ -172,7 +171,7 @@ module MigrationUpdater
         # look for the "end" of "def down"
         line_match = line.match(down_method_end_trigger)
         if !line_match.nil?
-          _debug "Found the end of 'def down' at index: #{line_index}"
+          # _debug "Found the end of 'def down' at index: #{line_index}"
           @lines.insert(line_index, "\n") # insert empty line to keep annotations 1 line apart
           @lines.insert(line_index, indent_space + "# #{down_keyword}: #{source_file}\n")
           down_annotation_index = line_index
@@ -221,6 +220,8 @@ module MigrationUpdater
         end
       end
 
+      # TODO: only catch definition between up and down indexes
+
       # _debug "up: #{up_line_index} | down: #{down_line_index} | function: #{function_line_index}"
 
       # TODO: add some validations over current block
@@ -257,7 +258,12 @@ module MigrationUpdater
       function_previous_block = function_block.join('')
       break
 
-      # TODO: if no previous def is found, create a annotation with just a drop, maybe? + warning?
+    end
+
+    # no previous def is found, create a annotation with just a drop, maybe? + warning?
+    if function_previous_block.nil?
+      @lines.insert(down_annotation_index + 1, "    # TODO: insert a DROP? Warn the user?\n")
+      return
     end
 
     # erase previous block (if one exists)
