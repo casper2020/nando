@@ -126,8 +126,9 @@ module NandoMigrator
 
   def self.update_migration (options = {}, args = [])
     _debug 'Updating!'
+    functions_to_add = options[:functions_to_add]
 
-    MigrationUpdater.update_migration(args[0], @working_dir)
+    MigrationUpdater.update_migration(args[0], @working_dir, functions_to_add)
   end
 
   # --------------------------------------------------------

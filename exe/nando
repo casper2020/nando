@@ -20,6 +20,15 @@ parser = OptionParser.new do |opt|
     options[:type] = type
   end
 
+  opt.on("-f", "--function [VALUE]", String) do |function|
+    if function.nil?
+      _debug 'TODO: open interface for user to paste function list'
+      return
+    else
+      options[:functions_to_add] = [function, function, function]
+    end
+  end
+
   opt.separator ""
 
   opt.on("-h", "--help", "Show this message") do |value|

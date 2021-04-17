@@ -1,6 +1,6 @@
 module MigrationUpdater
 
-  def self.update_migration (migration_file_path, working_directory)
+  def self.update_migration (migration_file_path, working_directory, functions_to_add)
 
     if !File.file?(migration_file_path)
       raise Nando::GenericError.new("No file '#{migration_file_path}' was found")
@@ -14,6 +14,8 @@ module MigrationUpdater
 
     @changed_file = false
     @source_files_copied = []
+
+    add_new_annotations_to_file_lines(functions_to_add)
 
     # TODO: might add a split by '/' in "get_migration_version_and_name" (also won't work on db/dir1/dir2/migration_name.rb)
     @curr_migration_version, curr_migration_name = NandoMigrator.get_migration_version_and_name(migration_file_path.split('/')[2])
@@ -288,6 +290,71 @@ module MigrationUpdater
 
     @lines.insert(down_annotation_index + 1, function_previous_block)
 
+  end
+
+  ## adds new annotations to bottom of "up" method
+  def self.add_new_annotations_to_file_lines (functions_to_add)
+    migration_file_lines = @lines
+    up_start_index, up_end_index, down_start_index, down_end_index = get_migration_file_up_and_down_limits(migration_file_lines)
+
+    # insert annotations at the bottom of the "up" method
+    functions_to_add.each do |curr_function_path|
+      _debug curr_function_path
+      annotation = NandoUtils.get_annotation_from_file_path(curr_function_path)
+      migration_file_lines.insert(up_end_index, annotation)
+      migration_file_lines.insert(up_end_index, "\n") # insert empty line to separate annotations
+    end
+
+    @lines = migration_file_lines
+  end
+
+  def self.get_migration_file_up_and_down_limits (file_lines)
+    up_start_index = nil
+    up_end_index = nil
+    down_start_index = nil
+    down_end_index = nil
+
+    curr_state = nil
+    def_indent = nil
+
+    # find up, down (beggining and end of functions are done by finding an "end" with the same indentation)
+    file_lines.each_with_index do |line, line_index|
+      case curr_state
+      when 'up', 'down'
+        # look for end of up/down
+        if line_match = line.match(/^#{def_indent}end$/)
+          if curr_state == 'up'
+            up_end_index = line_index
+          else
+            down_end_index = line_index
+          end
+          curr_state = nil
+          def_indent = nil
+        end
+      else
+        # read line trying to find beggining of "up" or "down"
+        if line_match = line.match(/(\s*)def(?:\s*)up/) then
+          curr_state = 'up'
+          def_indent = line_match[1]
+          up_start_index = line_index
+          next
+        end
+        if line_match = line.match(/(\s*)def(?:\s*)down/) then
+          curr_state = 'down'
+          def_indent = line_match[1]
+          down_start_index = line_index
+          next
+        end
+      end
+
+      if !up_end_index.nil? && !down_end_index.nil?
+        # _debug "Found up and down"
+        break
+      end
+    end
+
+    # TODO: might add some checks if the index values don't make sense
+    return up_start_index, up_end_index, down_start_index, down_end_index
   end
 
 end
