@@ -22,10 +22,9 @@ parser = OptionParser.new do |opt|
 
   opt.on("-f", "--function [VALUE]", String) do |function|
     if function.nil?
-      _debug 'TODO: open interface for user to paste function list'
-      return
+      options[:functions_to_add] = NandoInterface.get_user_function_list
     else
-      options[:functions_to_add] = [function, function, function]
+      options[:functions_to_add] = [] << function
     end
   end
 
