@@ -62,7 +62,7 @@ module NandoMigrator
     applied_migrations = get_applied_migrations()
 
     for filename in migration_files do
-      migration_version, migration_name = get_migration_version_and_name(filename)
+      migration_version, migration_name = NandoUtils.get_migration_version_and_name_from_file_path(filename)
 
       if applied_migrations[migration_version]
         next
@@ -97,7 +97,7 @@ module NandoMigrator
 
     for migration_index in 0...migration_files.length do
       filename = migration_files[migration_index]
-      migration_version, migration_name = get_migration_version_and_name(filename)
+      migration_version, migration_name = NandoUtils.get_migration_version_and_name_from_file_path(filename)
 
       execute_migration_method(:down, filename, migration_name, migration_version)
     end
@@ -237,13 +237,6 @@ module NandoMigrator
       raise Nando::MigrationTypeError.new(migration_type) # sending the input value as the error, for easier understanding of the problem for users
     end
     return camelize_migration_type
-  end
-
-  def self.get_migration_version_and_name (filename)
-    match = /^(\d+)\_(.*)\.rb/.match(filename)
-    migration_version = match[1] # by this point, a filename has already been validated, so I don't need to double check
-    migration_name = match[2]
-    return migration_version, migration_name
   end
 
   def self.get_migration_class (filename)

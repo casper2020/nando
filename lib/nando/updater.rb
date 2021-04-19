@@ -15,10 +15,11 @@ module MigrationUpdater
     @changed_file = false
     @source_files_copied = []
 
-    add_new_annotations_to_file_lines(functions_to_add)
+    if !functions_to_add.nil?
+      add_new_annotations_to_file_lines(functions_to_add)
+    end
 
-    # TODO: might add a split by '/' in "get_migration_version_and_name" (also won't work on db/dir1/dir2/migration_name.rb)
-    @curr_migration_version, curr_migration_name = NandoMigrator.get_migration_version_and_name(migration_file_path.split('/')[2])
+    @curr_migration_version, curr_migration_name = NandoUtils.get_migration_version_and_name_from_file_path(migration_file_path)
     find_and_update()
 
     if @changed_file
