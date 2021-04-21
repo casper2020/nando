@@ -62,6 +62,8 @@ begin
       raise KeyError # ARGV[0] is the new migration file
     end
     NandoMigrator.update_migration(options, ARGV)
+  when 'diff'
+    NandoMigrator.diff_schemas(options, ARGV)
   else
     STDERR.puts %Q[Invalid command "#{action}". Run "#{File.basename($0)} --help" for details.]
     exit 3

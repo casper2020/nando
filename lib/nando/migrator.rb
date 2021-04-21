@@ -1,5 +1,6 @@
 require 'pg'
 require 'dotenv'
+require 'awesome_print'
 
 begin
   require 'byebug'
@@ -129,6 +130,13 @@ module NandoMigrator
     functions_to_add = options[:functions_to_add]
 
     MigrationUpdater.update_migration(args[0], @working_dir, functions_to_add)
+  end
+
+  def self.diff_schemas (options = {}, args = [])
+    _debug 'Schema Diff'
+
+    # TODO: replace hardcoded values (source_schema, target_schema)
+    NandoSchemaDiff.diff_schemas('entity_1', 'entity_2')
   end
 
   # --------------------------------------------------------

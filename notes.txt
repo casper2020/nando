@@ -50,6 +50,11 @@ drop database if exists test_nando_cdb;
 create database test_nando_cdb;
 \c test_nando_cdb
 
+\c toconline
+drop database if exists test_nando_tables;
+create database test_nando_tables;
+\c test_nando_tables
+
 
 # @db_connection.exec('BEGIN')
 # @db_connection.exec('COMMIT')
