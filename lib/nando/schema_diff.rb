@@ -5,59 +5,43 @@ module NandoSchemaDiff
 
     # results = db_connection.exec("\\d") # DOES NOT WORK
 
-    results = db_connection.exec("
-       SELECT COALESCE(c1.table_name, c2.table_name) AS table_name,
-              COALESCE(c1.column_name, c2.column_name) AS table_column,
-              COALESCE(c1.table_schema, c2.table_schema) AS table_schema,
-              COALESCE(c1.data_type, c2.data_type) AS data_type,
-              c1.column_name AS schema1,
-              c2.column_name AS schema2
-         FROM
-              (SELECT table_name, column_name, table_schema, data_type
-                 FROM information_schema.columns c
-                WHERE c.table_schema = '#{source_schema}') c1
-              FULL JOIN
-              (SELECT table_name, column_name, table_schema, data_type
-                 FROM information_schema.columns c
-                WHERE c.table_schema = '#{target_schema}') c2
-              ON c1.table_name = c2.table_name AND c1.column_name = c2.column_name
-        WHERE c1.column_name IS NULL OR c2.column_name IS NULL
-        ORDER by table_schema, table_name, table_column;
-    ")
+    source_info = get_info_base_structure()
+    target_info = get_info_base_structure()
 
     source = get_schema_structure(source_schema)
     target = get_schema_structure(target_schema)
 
-    source_info = get_info_structure()
-    target_info = get_info_structure()
+    # start comparing structure
 
-    # compare structure
     # checking for different tables
-    if keys_diff1 = source.keys - target.keys
-      source_info['tables']['missing'] += keys_diff1
-    end
+    check_different_tables(source, target, source_info, target_info)
+    check_different_tables(target, source, target_info, source_info)
 
-    if keys_diff = target.keys - source.keys
-      target_info['tables']['missing'] += keys_diff
-    end
+    # checking for different columns in all shared tables
+    check_mismatching_columns(source, target, source_info, target_info)
+    check_mismatching_columns(target, source, target_info, source_info)
 
-    source.keys.each do |table|
-      # if keys_diff1.include?(table)
-      #   next
-      # end
-
-      if keys_diff = source[table]['columns'].keys - target[table]['columns'].keys
-        source_info['columns']['missing'] += keys_diff
-      end
-    end
+    # checking for mismatching columns in all shared tables
 
 
 
+    # checking for different indexes in all shared tables
+    # checking for mismatching indexes in all shared tables
 
-    # debugger
+    # checking for different triggers in all shared tables
+    # checking for mismatching triggers in all shared tables
 
+    # checking for different constraints in all shared tables
+    # checking for mismatching constraints in all shared tables
+
+
+    # TODO: what to do about views, types, etc
+
+    puts ""
     print_diff_info(source_info, source_schema)
+    puts ""
     print_diff_info(target_info, target_schema)
+    puts ""
   end
 
   def self.get_schema_structure (curr_schema)
@@ -88,14 +72,45 @@ module NandoSchemaDiff
     return schema_structure
   end
 
-  def self.get_info_structure
+  def self.get_info_base_structure
     return {
-      'tables' => { 'missing' => [] },
-      'columns' => { 'missing' => [] }
+      'tables' => {
+        'missing' => [],
+        'extra' => []
+      },
+      'columns' => {
+        'missing' => [],
+        'extra' => []
+      }
     }
   end
 
+  def self.check_different_tables (left_schema, right_schema, left_info, right_info)
+    if keys_diff = left_schema.keys - right_schema.keys
+      left_info['tables']['extra'] += keys_diff
+    end
+
+    if keys_diff = right_schema.keys - left_schema.keys
+      left_info['tables']['missing'] += keys_diff
+    end
+  end
+
+  def self.check_mismatching_columns (left_schema, right_schema, left_info, right_info)
+    left_schema.keys.each do |table|
+      if left_info['tables']['missing'].include?(table) || right_info['tables']['missing'].include?(table)
+        _debug "Skipping: #{table}"
+        next
+      end
+
+      if keys_diff = left_schema[table]['columns'].keys - right_schema[table]['columns'].keys
+        left_info['columns']['missing'] += keys_diff
+      end
+    end
+  end
+
   def self.print_diff_info (info, schema)
+    _warn "START PRINTING '#{schema}'"
+
     info['tables']['missing'].each do |table|
       _warn "Table '#{table}' does not exist in schema '#{schema}'", 'Diff'
     end
