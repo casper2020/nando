@@ -74,7 +74,10 @@ module NandoSchemaDiff
 
     for row in results do
       schema_structure[row['table_name']]['columns'][row['column_name']] = {
-
+        'ordinal_position' => row['ordinal_position'],
+        'column_default'   => row['column_default'],
+        'is_nullable'      => row['is_nullable'],
+        'data_type'        => row['data_type']
       }
     end
 
@@ -107,35 +110,37 @@ module NandoSchemaDiff
 
   # column comparison
   def self.check_different_columns (left_schema, right_schema, left_info, right_info)
-    left_schema.keys.each do |table|
+    left_schema.each do |table_key, table_value|
       # ignore tables that only appear in one of the schemas
-      if left_info['tables']['missing'].include?(table) || right_info['tables']['missing'].include?(table)
-        _debug "Skipping table (1): #{table}"
+      if left_info['tables']['missing'].include?(table_key) || right_info['tables']['missing'].include?(table_key)
+        _debug "Skipping table (1): #{table_key}"
         next
       end
 
-      if keys_diff = left_schema[table]['columns'].keys - right_schema[table]['columns'].keys
+      if keys_diff = left_schema[table_key]['columns'].keys - right_schema[table_key]['columns'].keys
         left_info['columns']['missing'] += keys_diff
       end
     end
   end
 
   def self.check_mismatching_columns(left_schema, right_schema, left_info, right_info)
-    left_schema.keys.each do |table|
+    left_schema.each do |table_key, table_value|
       # ignore tables that only appear in one of the schemas
-      if left_info['tables']['missing'].include?(table) || right_info['tables']['missing'].include?(table)
-        _debug "Skipping table (2): #{table}"
+      if left_info['tables']['missing'].include?(table_key) || right_info['tables']['missing'].include?(table_key)
+        _debug "Skipping table (2): #{table_key}"
         next
       end
 
-      left_schema[table]['columns'].keys.each do |column|
+      table_value['columns'].each do |column_key, column_value|
         # ignore columns that only appear in one of the tables
-        if left_info['columns']['missing'].include?(column) || right_info['columns']['missing'].include?(column)
-          _debug "Skipping column: #{column}"
+        if left_info['columns']['missing'].include?(column_key) || right_info['columns']['missing'].include?(column_key)
+          _debug "Skipping column: #{column_key}"
           next
         end
 
-        _debug "CURR: #{column}"
+        _debug "CURR1: #{column_key}"
+        _debug "CURR2: #{column_value}"
+        # _debug "CURR2: #{left_schema[table]['columns'][column]}"
         # if keys_diff = left_schema[table]['columns'].keys - right_schema[table]['columns'].keys
         #   left_info['columns']['missing'] += keys_diff
         # end
