@@ -40,9 +40,9 @@ module NandoSchemaDiff
     # TODO: what to do about views, types, etc
 
     puts ""
-    print_diff_info(source_info, source_schema)
+    print_diff_info(source_info, source_schema, target_schema)
     puts ""
-    print_diff_info(target_info, target_schema)
+    print_diff_info(target_info, target_schema, source_schema)
     puts ""
   end
 
@@ -75,7 +75,7 @@ module NandoSchemaDiff
     for row in results do
       schema_structure[row['table_name']]['columns'][row['column_name']] = {
         'ordinal_position' => row['ordinal_position'],
-        'column_default'   => row['column_default'],
+        'column_default'   => row['column_default'].nil? ? row['column_default'] : row['column_default'].gsub(curr_schema, ''), # remove the schema, since sequences include it in their name
         'is_nullable'      => row['is_nullable'],
         'data_type'        => row['data_type']
       }
@@ -90,9 +90,11 @@ module NandoSchemaDiff
         'missing' => [],
         'extra' => []
       },
+      # TODO: make this structure better? (tables -> columns?)
       'columns' => {
         'missing' => [],
-        'extra' => []
+        'extra' => [],
+        'mismatching' => []
       }
     }
   end
@@ -118,7 +120,11 @@ module NandoSchemaDiff
       end
 
       if keys_diff = left_schema[table_key]['columns'].keys - right_schema[table_key]['columns'].keys
-        left_info['columns']['missing'] += keys_diff
+        left_info['columns']['extra'] += keys_diff # TODO: add more info, not just the keys
+      end
+
+      if keys_diff = right_schema[table_key]['columns'].keys - left_schema[table_key]['columns'].keys
+        left_info['columns']['missing'] += keys_diff # TODO: add more info, not just the keys
       end
     end
   end
@@ -138,26 +144,35 @@ module NandoSchemaDiff
           next
         end
 
-        _debug "CURR1: #{column_key}"
-        _debug "CURR2: #{column_value}"
-        # _debug "CURR2: #{left_schema[table]['columns'][column]}"
-        # if keys_diff = left_schema[table]['columns'].keys - right_schema[table]['columns'].keys
-        #   left_info['columns']['missing'] += keys_diff
-        # end
+        if left_schema[table_key]['columns'][column_key] != right_schema[table_key]['columns'][column_key]
+          left_info['columns']['mismatching'] << column_key # TODO: add more info, not just a key
+        end
       end
     end
   end
 
-  def self.print_diff_info (info, schema)
-    _warn "START PRINTING '#{schema}'"
+  def self.print_diff_info (info, source_schema, target_schema)
+    _warn "START PRINTING '#{source_schema}'"
 
     info['tables']['missing'].each do |table|
-      _warn "Table '#{table}' does not exist in schema '#{schema}'", 'Diff'
+      _warn "Table '#{table}' does not exist in schema '#{source_schema}'", 'Diff1'
+    end
+
+    info['tables']['extra'].each do |table|
+      _warn "Table '#{table}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff2'
     end
 
     # _warn "Table '#{row['table_name']}' in schema '#{schema}' does not have a column '#{row['table_column']}' of type '#{row['data_type']}'", 'Diff'
     info['columns']['missing'].each do |column|
-      _warn "Column '#{column}' does not exist in schema '#{schema}'", 'Diff' # TODO: fix this message
+      _warn "Column '#{column}' does not exist in schema '#{source_schema}'", 'Diff3' # TODO: fix this message
+    end
+
+    info['columns']['extra'].each do |column|
+      _warn "Column '#{column}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff4' # TODO: fix this message
+    end
+
+    info['columns']['mismatching'].each do |column|
+      _warn "Column '#{column}' does not match between schemas", 'Diff5' # TODO: fix this message
     end
 
   end
