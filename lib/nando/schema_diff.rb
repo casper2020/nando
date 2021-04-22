@@ -18,10 +18,12 @@ module NandoSchemaDiff
     check_different_tables(target, source, target_info, source_info)
 
     # checking for different columns in all shared tables
-    check_mismatching_columns(source, target, source_info, target_info)
-    check_mismatching_columns(target, source, target_info, source_info)
+    check_different_columns(source, target, source_info, target_info)
+    check_different_columns(target, source, target_info, source_info)
 
     # checking for mismatching columns in all shared tables
+    check_mismatching_columns(source, target, source_info, target_info)
+    check_mismatching_columns(target, source, target_info, source_info)
 
 
 
@@ -65,8 +67,15 @@ module NandoSchemaDiff
        WHERE table_schema = '#{curr_schema}';
     ")
 
+    # ordinal_position         │ 4
+    # column_default           │ <NULL>
+    # is_nullable              │ YES
+    # data_type                │ text
+
     for row in results do
-      schema_structure[row['table_name']]['columns'][row['column_name']] = {}
+      schema_structure[row['table_name']]['columns'][row['column_name']] = {
+
+      }
     end
 
     return schema_structure
@@ -85,6 +94,7 @@ module NandoSchemaDiff
     }
   end
 
+  # table comparison
   def self.check_different_tables (left_schema, right_schema, left_info, right_info)
     if keys_diff = left_schema.keys - right_schema.keys
       left_info['tables']['extra'] += keys_diff
@@ -95,15 +105,40 @@ module NandoSchemaDiff
     end
   end
 
-  def self.check_mismatching_columns (left_schema, right_schema, left_info, right_info)
+  # column comparison
+  def self.check_different_columns (left_schema, right_schema, left_info, right_info)
     left_schema.keys.each do |table|
+      # ignore tables that only appear in one of the schemas
       if left_info['tables']['missing'].include?(table) || right_info['tables']['missing'].include?(table)
-        _debug "Skipping: #{table}"
+        _debug "Skipping table (1): #{table}"
         next
       end
 
       if keys_diff = left_schema[table]['columns'].keys - right_schema[table]['columns'].keys
         left_info['columns']['missing'] += keys_diff
+      end
+    end
+  end
+
+  def self.check_mismatching_columns(left_schema, right_schema, left_info, right_info)
+    left_schema.keys.each do |table|
+      # ignore tables that only appear in one of the schemas
+      if left_info['tables']['missing'].include?(table) || right_info['tables']['missing'].include?(table)
+        _debug "Skipping table (2): #{table}"
+        next
+      end
+
+      left_schema[table]['columns'].keys.each do |column|
+        # ignore columns that only appear in one of the tables
+        if left_info['columns']['missing'].include?(column) || right_info['columns']['missing'].include?(column)
+          _debug "Skipping column: #{column}"
+          next
+        end
+
+        _debug "CURR: #{column}"
+        # if keys_diff = left_schema[table]['columns'].keys - right_schema[table]['columns'].keys
+        #   left_info['columns']['missing'] += keys_diff
+        # end
       end
     end
   end
