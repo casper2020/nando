@@ -17,6 +17,7 @@ module NandoSchemaDiff
     check_different_tables(source, target, source_info, target_info)
     check_different_tables(target, source, target_info, source_info)
 
+
     # checking for different columns in all shared tables
     check_different_columns(source, target, source_info, target_info)
     check_different_columns(target, source, target_info, source_info)
@@ -26,16 +27,17 @@ module NandoSchemaDiff
     check_mismatching_columns(target, source, target_info, source_info)
 
 
-
-    # checking for different indexes in all shared tables
-    # checking for mismatching indexes in all shared tables
-
     # checking for different triggers in all shared tables
+    check_different_triggers(source, target, source_info, target_info)
+    check_different_triggers(target, source, target_info, source_info)
+
     # checking for mismatching triggers in all shared tables
 
     # checking for different constraints in all shared tables
     # checking for mismatching constraints in all shared tables
 
+    # checking for different indexes in all shared tables
+    # checking for mismatching indexes in all shared tables
 
     # TODO: what to do about views, types, etc
 
@@ -50,6 +52,8 @@ module NandoSchemaDiff
     schema_structure = {}
     db_connection = NandoMigrator.get_database_connection();
 
+    # TODO: reduce these SELECT * to specific columns
+
     # get all tables in a schema
     results = db_connection.exec("
       SELECT *
@@ -58,19 +62,20 @@ module NandoSchemaDiff
     ")
 
     for row in results do
-      schema_structure[row['table_name']] = { 'columns' => {}, 'indexes' => {} }
+      schema_structure[row['table_name']] = {
+        'columns' => {},
+        'triggers' => {},
+        'constraints' => {},
+        'indexes' => {}
+      }
     end
 
+    # get all columns for each table
     results = db_connection.exec("
       SELECT *
         FROM information_schema.columns
        WHERE table_schema = '#{curr_schema}';
     ")
-
-    # ordinal_position         │ 4
-    # column_default           │ <NULL>
-    # is_nullable              │ YES
-    # data_type                │ text
 
     for row in results do
       schema_structure[row['table_name']]['columns'][row['column_name']] = {
@@ -80,6 +85,27 @@ module NandoSchemaDiff
         'data_type'        => row['data_type']
       }
     end
+
+    # get all triggers for each table
+    results = db_connection.exec("
+      SELECT *
+        FROM information_schema.triggers
+       WHERE event_object_schema = '#{curr_schema}';
+    ")
+
+    for row in results do
+      schema_structure[row['event_object_table']]['triggers'][row['trigger_name']] = {
+        'event_manipulation'  => row['event_manipulation'],
+        'action_order'        => row['action_order'],
+        'action_condition'    => row['action_condition'],
+        'action_statement'    => row['action_statement'],
+        'action_orientation'  => row['action_orientation'],
+        'action_timing'       => row['action_timing']
+      }
+    end
+
+    # information_schema.check_constraints
+    # information_schema.views
 
     return schema_structure
   end
@@ -125,6 +151,7 @@ module NandoSchemaDiff
     end
   end
 
+
   # table comparison
   def self.check_different_tables (left_schema, right_schema, left_info, right_info)
     if keys_diff = left_schema.keys - right_schema.keys
@@ -135,6 +162,7 @@ module NandoSchemaDiff
       left_info['tables']['missing'] += keys_diff
     end
   end
+
 
   # column comparison
   def self.check_different_columns (left_schema, right_schema, left_info, right_info)
@@ -157,7 +185,7 @@ module NandoSchemaDiff
     end
   end
 
-  def self.check_mismatching_columns(left_schema, right_schema, left_info, right_info)
+  def self.check_mismatching_columns (left_schema, right_schema, left_info, right_info)
     left_schema.each do |table_key, table_value|
       # ignore tables that only appear in one of the schemas
       if left_info['tables']['missing'].include?(table_key) || right_info['tables']['missing'].include?(table_key)
@@ -180,6 +208,28 @@ module NandoSchemaDiff
     end
   end
 
+
+  # trigger comparison
+  def self.check_different_triggers (left_schema, right_schema, left_info, right_info)
+    left_schema.each do |table_key, table_value|
+      # ignore tables that only appear in one of the schemas
+      if left_info['tables']['missing'].include?(table_key) || right_info['tables']['missing'].include?(table_key)
+        _debug "Skipping table (3): #{table_key}"
+        next
+      end
+
+      if keys_diff = left_schema[table_key]['triggers'].keys - right_schema[table_key]['triggers'].keys
+        setup_table_info(left_info, table_key)
+        left_info['tables']['mismatching'][table_key]['triggers']['extra'] += keys_diff
+      end
+
+      if keys_diff = right_schema[table_key]['triggers'].keys - left_schema[table_key]['triggers'].keys
+        setup_table_info(left_info, table_key)
+        left_info['tables']['mismatching'][table_key]['triggers']['missing'] += keys_diff
+      end
+    end
+  end
+
   def self.print_diff_info (info, source_schema, target_schema)
     _warn "START PRINTING '#{source_schema}'"
 
@@ -194,6 +244,7 @@ module NandoSchemaDiff
     # iterate over all tables with info
     info['tables']['mismatching'].each do |table_key, table_value|
 
+      # columns
       table_value['columns']['missing'].each do |column|
         _warn "Column '#{column}' does not exist in schema '#{source_schema}'", 'Diff3'
       end
@@ -204,6 +255,19 @@ module NandoSchemaDiff
 
       table_value['columns']['mismatching'].each do |column|
         _warn "Column '#{column}' does not match between schemas", 'Diff5' # TODO: fix this message
+      end
+
+      # triggers
+      table_value['triggers']['missing'].each do |trigger|
+        _warn "Trigger '#{trigger}' does not exist in schema '#{source_schema}'", 'Diff3'
+      end
+
+      table_value['triggers']['extra'].each do |trigger|
+        _warn "Trigger '#{trigger}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff4'
+      end
+
+      table_value['triggers']['mismatching'].each do |trigger|
+        _warn "Trigger '#{trigger}' does not match between schemas", 'Diff5' # TODO: fix this message
       end
 
     end
