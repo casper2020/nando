@@ -32,6 +32,9 @@ module NandoSchemaDiff
     check_different_triggers(target, source, target_info, source_info)
 
     # checking for mismatching triggers in all shared tables
+    check_mismatching_triggers(source, target, source_info, target_info)
+    check_mismatching_triggers(target, source, target_info, source_info)
+
 
     # checking for different constraints in all shared tables
     # checking for mismatching constraints in all shared tables
@@ -140,7 +143,7 @@ module NandoSchemaDiff
         "triggers" => {
           "missing" => [],
           "extra" => [],
-          "mismatching" => {}
+          "mismatching" => [] # TODO: replace with hash
         },
         "constraints" => {
           "missing" => [],
@@ -230,6 +233,29 @@ module NandoSchemaDiff
     end
   end
 
+  def self.check_mismatching_triggers (left_schema, right_schema, left_info, right_info)
+    left_schema.each do |table_key, table_value|
+      # ignore tables that only appear in one of the schemas
+      if left_info['tables']['missing'].include?(table_key) || right_info['tables']['missing'].include?(table_key)
+        _debug "Skipping table (4): #{table_key}"
+        next
+      end
+
+      table_value['triggers'].each do |trigger_key, trigger_value|
+        # ignore triggers that only appear in one of the tables
+        if left_info['tables']['mismatching'][table_key]['triggers']['missing'].include?(trigger_key) || right_info['tables']['mismatching'][table_key]['triggers']['missing'].include?(trigger_key)
+          _debug "Skipping trigger: #{trigger_key}"
+          next
+        end
+
+        if left_schema[table_key]['triggers'][trigger_key] != right_schema[table_key]['triggers'][trigger_key]
+          setup_table_info(left_info, table_key)
+          left_info['tables']['mismatching'][table_key]['triggers']['mismatching'] << trigger_key # TODO: add more info, not just a key
+        end
+      end
+    end
+  end
+
   def self.print_diff_info (info, source_schema, target_schema)
     _warn "START PRINTING '#{source_schema}'"
 
@@ -259,15 +285,15 @@ module NandoSchemaDiff
 
       # triggers
       table_value['triggers']['missing'].each do |trigger|
-        _warn "Trigger '#{trigger}' does not exist in schema '#{source_schema}'", 'Diff3'
+        _warn "Trigger '#{trigger}' does not exist in schema '#{source_schema}'", 'Diff6'
       end
 
       table_value['triggers']['extra'].each do |trigger|
-        _warn "Trigger '#{trigger}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff4'
+        _warn "Trigger '#{trigger}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff7'
       end
 
       table_value['triggers']['mismatching'].each do |trigger|
-        _warn "Trigger '#{trigger}' does not match between schemas", 'Diff5' # TODO: fix this message
+        _warn "Trigger '#{trigger}' does not match between schemas", 'Diff8' # TODO: fix this message
       end
 
     end
