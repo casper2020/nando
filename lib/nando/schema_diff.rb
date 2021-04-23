@@ -88,15 +88,41 @@ module NandoSchemaDiff
     return {
       'tables' => {
         'missing' => [],
-        'extra' => []
-      },
-      # TODO: make this structure better? (tables -> columns?)
-      'columns' => {
-        'missing' => [],
         'extra' => [],
-        'mismatching' => []
+        'mismatching' => {}
+      },
+      'views' => {
+        # not currently used, but reserved for now
       }
     }
+  end
+
+  def self.setup_table_info (info, table_name)
+    # create table structure if one does not exist
+    if info['tables']['mismatching'][table_name].nil?
+      info['tables']['mismatching'][table_name] = {
+        "columns" => {
+          "missing" => [],
+          "extra" => [],
+          "mismatching" => [] # TODO: replace with hash
+        },
+        "indexes" => {
+          "missing" => [],
+          "extra" => [],
+          "mismatching" => {}
+        },
+        "triggers" => {
+          "missing" => [],
+          "extra" => [],
+          "mismatching" => {}
+        },
+        "constraints" => {
+          "missing" => [],
+          "extra" => [],
+          "mismatching" => {}
+        }
+      }
+    end
   end
 
   # table comparison
@@ -120,11 +146,13 @@ module NandoSchemaDiff
       end
 
       if keys_diff = left_schema[table_key]['columns'].keys - right_schema[table_key]['columns'].keys
-        left_info['columns']['extra'] += keys_diff # TODO: add more info, not just the keys
+        setup_table_info(left_info, table_key)
+        left_info['tables']['mismatching'][table_key]['columns']['extra'] += keys_diff
       end
 
       if keys_diff = right_schema[table_key]['columns'].keys - left_schema[table_key]['columns'].keys
-        left_info['columns']['missing'] += keys_diff # TODO: add more info, not just the keys
+        setup_table_info(left_info, table_key)
+        left_info['tables']['mismatching'][table_key]['columns']['missing'] += keys_diff
       end
     end
   end
@@ -139,13 +167,14 @@ module NandoSchemaDiff
 
       table_value['columns'].each do |column_key, column_value|
         # ignore columns that only appear in one of the tables
-        if left_info['columns']['missing'].include?(column_key) || right_info['columns']['missing'].include?(column_key)
+        if left_info['tables']['mismatching'][table_key]['columns']['missing'].include?(column_key) || right_info['tables']['mismatching'][table_key]['columns']['missing'].include?(column_key)
           _debug "Skipping column: #{column_key}"
           next
         end
 
         if left_schema[table_key]['columns'][column_key] != right_schema[table_key]['columns'][column_key]
-          left_info['columns']['mismatching'] << column_key # TODO: add more info, not just a key
+          setup_table_info(left_info, table_key)
+          left_info['tables']['mismatching'][table_key]['columns']['mismatching'] << column_key # TODO: add more info, not just a key
         end
       end
     end
@@ -162,17 +191,21 @@ module NandoSchemaDiff
       _warn "Table '#{table}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff2'
     end
 
-    # _warn "Table '#{row['table_name']}' in schema '#{schema}' does not have a column '#{row['table_column']}' of type '#{row['data_type']}'", 'Diff'
-    info['columns']['missing'].each do |column|
-      _warn "Column '#{column}' does not exist in schema '#{source_schema}'", 'Diff3' # TODO: fix this message
-    end
+    # iterate over all tables with info
+    info['tables']['mismatching'].each do |table_key, table_value|
 
-    info['columns']['extra'].each do |column|
-      _warn "Column '#{column}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff4' # TODO: fix this message
-    end
+      table_value['columns']['missing'].each do |column|
+        _warn "Column '#{column}' does not exist in schema '#{source_schema}'", 'Diff3'
+      end
 
-    info['columns']['mismatching'].each do |column|
-      _warn "Column '#{column}' does not match between schemas", 'Diff5' # TODO: fix this message
+      table_value['columns']['extra'].each do |column|
+        _warn "Column '#{column}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff4'
+      end
+
+      table_value['columns']['mismatching'].each do |column|
+        _warn "Column '#{column}' does not match between schemas", 'Diff5' # TODO: fix this message
+      end
+
     end
 
   end
