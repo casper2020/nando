@@ -46,7 +46,13 @@ module NandoSchemaDiff
 
 
     # checking for different indexes in all shared tables
+    check_different_indexes(source, target, source_info, target_info)
+    check_different_indexes(target, source, target_info, source_info)
+
     # checking for mismatching indexes in all shared tables
+    check_mismatching_indexes(source, target, source_info, target_info)
+    check_mismatching_indexes(target, source, target_info, source_info)
+
 
     # TODO: what to do about views, types, etc
 
@@ -130,8 +136,19 @@ module NandoSchemaDiff
       }
     end
 
+    # get all indexes for each table
+    results = db_connection.exec("
+      SELECT *
+        FROM pg_catalog.pg_indexes
+       WHERE schemaname = '#{curr_schema}';
+    ")
 
-    # information_schema.views
+    for row in results do
+      schema_structure[row['tablename']]['indexes'][row['indexname']] = {
+        'tablespace'    => row['tablespace'],
+        'indexdef'      => row['indexdef'].gsub(curr_schema, ''), # remove the schema, since indexes include it in their definition
+      }
+    end
 
     return schema_structure
   end
@@ -161,7 +178,7 @@ module NandoSchemaDiff
         "indexes" => {
           "missing" => [],
           "extra" => [],
-          "mismatching" => {}
+          "mismatching" => [] # TODO: replace with hash
         },
         "triggers" => {
           "missing" => [],
@@ -305,7 +322,7 @@ module NandoSchemaDiff
     left_schema.each do |table_key, table_value|
       # ignore tables that only appear in one of the schemas
       if left_info['tables']['missing'].include?(table_key) || right_info['tables']['missing'].include?(table_key)
-        _debug "Skipping table (4): #{table_key}"
+        _debug "Skipping table (6): #{table_key}"
         next
       end
 
@@ -325,8 +342,53 @@ module NandoSchemaDiff
   end
 
 
+  # index comparison
+  def self.check_different_indexes (left_schema, right_schema, left_info, right_info)
+    left_schema.each do |table_key, table_value|
+      # ignore tables that only appear in one of the schemas
+      if left_info['tables']['missing'].include?(table_key) || right_info['tables']['missing'].include?(table_key)
+        _debug "Skipping table (7): #{table_key}"
+        next
+      end
+
+      if keys_diff = left_schema[table_key]['indexes'].keys - right_schema[table_key]['indexes'].keys
+        setup_table_info(left_info, table_key)
+        left_info['tables']['mismatching'][table_key]['indexes']['extra'] += keys_diff
+      end
+
+      if keys_diff = right_schema[table_key]['indexes'].keys - left_schema[table_key]['indexes'].keys
+        setup_table_info(left_info, table_key)
+        left_info['tables']['mismatching'][table_key]['indexes']['missing'] += keys_diff
+      end
+    end
+  end
+
+  def self.check_mismatching_indexes (left_schema, right_schema, left_info, right_info)
+    left_schema.each do |table_key, table_value|
+      # ignore tables that only appear in one of the schemas
+      if left_info['tables']['missing'].include?(table_key) || right_info['tables']['missing'].include?(table_key)
+        _debug "Skipping table (8): #{table_key}"
+        next
+      end
+
+      table_value['indexes'].each do |index_key, index_value|
+        # ignore indexes that only appear in one of the tables
+        if left_info['tables']['mismatching'][table_key]['indexes']['missing'].include?(index_key) || right_info['tables']['mismatching'][table_key]['indexes']['missing'].include?(index_key)
+          _debug "Skipping index: #{index_key}"
+          next
+        end
+
+        if left_schema[table_key]['indexes'][index_key] != right_schema[table_key]['indexes'][index_key]
+          setup_table_info(left_info, table_key)
+          left_info['tables']['mismatching'][table_key]['indexes']['mismatching'] << index_key # TODO: add more info, not just a key
+        end
+      end
+    end
+  end
+
+
   def self.print_diff_info (info, source_schema, target_schema)
-    _warn "START PRINTING '#{source_schema}'"
+    _warn "Printing '#{source_schema}'"
 
     info['tables']['missing'].each do |table|
       _warn "Table '#{table}' does not exist in schema '#{source_schema}'", 'Diff1'
@@ -376,6 +438,19 @@ module NandoSchemaDiff
 
       table_value['constraints']['mismatching'].each do |constraint|
         _warn "Constraint '#{constraint}' does not match between schemas", 'Diff11' # TODO: fix this message
+      end
+
+      # indexes
+      table_value['indexes']['missing'].each do |index|
+        _warn "Index '#{index}' does not exist in schema '#{source_schema}'", 'Diff12'
+      end
+
+      table_value['indexes']['extra'].each do |index|
+        _warn "Index '#{index}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff13'
+      end
+
+      table_value['indexes']['mismatching'].each do |index|
+        _warn "Index '#{index}' does not match between schemas", 'Diff14' # TODO: fix this message
       end
 
     end
