@@ -37,7 +37,13 @@ module NandoSchemaDiff
 
 
     # checking for different constraints in all shared tables
+    check_different_constraints(source, target, source_info, target_info)
+    check_different_constraints(target, source, target_info, source_info)
+
     # checking for mismatching constraints in all shared tables
+    check_mismatching_constraints(source, target, source_info, target_info)
+    check_mismatching_constraints(target, source, target_info, source_info)
+
 
     # checking for different indexes in all shared tables
     # checking for mismatching indexes in all shared tables
@@ -107,7 +113,24 @@ module NandoSchemaDiff
       }
     end
 
-    # information_schema.check_constraints
+    # get all constraints for each table
+    results = db_connection.exec("
+          SELECT rel.relname AS table_name,
+                 con.conname AS constraint_name,
+                 con.consrc AS constraint_source
+            FROM pg_catalog.pg_constraint con
+      INNER JOIN pg_catalog.pg_class rel ON rel.oid = con.conrelid
+      INNER JOIN pg_catalog.pg_namespace nsp ON nsp.oid = connamespace
+           WHERE nsp.nspname = '#{curr_schema}';
+    ")
+
+    for row in results do
+      schema_structure[row['table_name']]['constraints'][row['constraint_name']] = {
+        'constraint_source'   => row['constraint_source']
+      }
+    end
+
+
     # information_schema.views
 
     return schema_structure
@@ -148,7 +171,7 @@ module NandoSchemaDiff
         "constraints" => {
           "missing" => [],
           "extra" => [],
-          "mismatching" => {}
+          "mismatching" => [] # TODO: replace with hash
         }
       }
     end
@@ -256,6 +279,52 @@ module NandoSchemaDiff
     end
   end
 
+
+  # constraint comparison
+  def self.check_different_constraints (left_schema, right_schema, left_info, right_info)
+    left_schema.each do |table_key, table_value|
+      # ignore tables that only appear in one of the schemas
+      if left_info['tables']['missing'].include?(table_key) || right_info['tables']['missing'].include?(table_key)
+        _debug "Skipping table (5): #{table_key}"
+        next
+      end
+
+      if keys_diff = left_schema[table_key]['constraints'].keys - right_schema[table_key]['constraints'].keys
+        setup_table_info(left_info, table_key)
+        left_info['tables']['mismatching'][table_key]['constraints']['extra'] += keys_diff
+      end
+
+      if keys_diff = right_schema[table_key]['constraints'].keys - left_schema[table_key]['constraints'].keys
+        setup_table_info(left_info, table_key)
+        left_info['tables']['mismatching'][table_key]['constraints']['missing'] += keys_diff
+      end
+    end
+  end
+
+  def self.check_mismatching_constraints (left_schema, right_schema, left_info, right_info)
+    left_schema.each do |table_key, table_value|
+      # ignore tables that only appear in one of the schemas
+      if left_info['tables']['missing'].include?(table_key) || right_info['tables']['missing'].include?(table_key)
+        _debug "Skipping table (4): #{table_key}"
+        next
+      end
+
+      table_value['constraints'].each do |constraint_key, constraint_value|
+        # ignore constraints that only appear in one of the tables
+        if left_info['tables']['mismatching'][table_key]['constraints']['missing'].include?(constraint_key) || right_info['tables']['mismatching'][table_key]['constraints']['missing'].include?(constraint_key)
+          _debug "Skipping constraint: #{constraint_key}"
+          next
+        end
+
+        if left_schema[table_key]['constraints'][constraint_key] != right_schema[table_key]['constraints'][constraint_key]
+          setup_table_info(left_info, table_key)
+          left_info['tables']['mismatching'][table_key]['constraints']['mismatching'] << constraint_key # TODO: add more info, not just a key
+        end
+      end
+    end
+  end
+
+
   def self.print_diff_info (info, source_schema, target_schema)
     _warn "START PRINTING '#{source_schema}'"
 
@@ -294,6 +363,19 @@ module NandoSchemaDiff
 
       table_value['triggers']['mismatching'].each do |trigger|
         _warn "Trigger '#{trigger}' does not match between schemas", 'Diff8' # TODO: fix this message
+      end
+
+      # constraints
+      table_value['constraints']['missing'].each do |constraint|
+        _warn "Constraint '#{constraint}' does not exist in schema '#{source_schema}'", 'Diff9'
+      end
+
+      table_value['constraints']['extra'].each do |constraint|
+        _warn "Constraint '#{constraint}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff10'
+      end
+
+      table_value['constraints']['mismatching'].each do |constraint|
+        _warn "Constraint '#{constraint}' does not match between schemas", 'Diff11' # TODO: fix this message
       end
 
     end

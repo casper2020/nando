@@ -60,6 +60,8 @@ create database test_nando_tables;
 # @db_connection.exec('COMMIT')
 
 
+pg_dump -t 'entity_1.customers' --schema-only test_nando_tables
+
 
 # Calling logger methods
 
