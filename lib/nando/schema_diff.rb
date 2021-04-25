@@ -388,14 +388,14 @@ module NandoSchemaDiff
 
 
   def self.print_diff_info (info, source_schema, target_schema)
-    _warn "Printing '#{source_schema}'"
+    puts "Comparing '#{source_schema}' to '#{target_schema}'".magenta.bold
 
     info[:tables][:missing].each do |table|
-      _warn "Table '#{table}' does not exist in schema '#{source_schema}'", 'Diff1'
+      print_missing "Table '#{table}'"
     end
 
     info[:tables][:extra].each do |table|
-      _warn "Table '#{table}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff2'
+      print_extra "Table '#{table}'"
     end
 
     # iterate over all tables with info
@@ -403,58 +403,69 @@ module NandoSchemaDiff
 
       # columns
       table_value[:columns][:missing].each do |column|
-        _warn "Column '#{column}' does not exist in schema '#{source_schema}'", 'Diff3'
+        print_missing "Column '#{column}' in table '#{table_key}'"
       end
 
       table_value[:columns][:extra].each do |column|
-        _warn "Column '#{column}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff4'
+        print_extra "Column '#{column}' in table '#{table_key}'"
       end
 
       table_value[:columns][:mismatching].each do |column|
-        _warn "Column '#{column}' does not match between schemas", 'Diff5' # TODO: fix this message
+        print_mismatching "Column '#{column}' in table '#{table_key}'"
       end
 
       # triggers
       table_value[:triggers][:missing].each do |trigger|
-        _warn "Trigger '#{trigger}' does not exist in schema '#{source_schema}'", 'Diff6'
+        print_missing "Trigger '#{trigger}' in table '#{table_key}'"
       end
 
       table_value[:triggers][:extra].each do |trigger|
-        _warn "Trigger '#{trigger}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff7'
+        print_extra "Trigger '#{trigger}' in table '#{table_key}'"
       end
 
       table_value[:triggers][:mismatching].each do |trigger|
-        _warn "Trigger '#{trigger}' does not match between schemas", 'Diff8' # TODO: fix this message
+        print_mismatching "Trigger '#{trigger}' in table '#{table_key}'"
       end
 
       # constraints
       table_value[:constraints][:missing].each do |constraint|
-        _warn "Constraint '#{constraint}' does not exist in schema '#{source_schema}'", 'Diff9'
+        print_missing "Constraint '#{constraint}' in table '#{table_key}'"
       end
 
       table_value[:constraints][:extra].each do |constraint|
-        _warn "Constraint '#{constraint}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff10'
+        print_extra "Constraint '#{constraint}' in table '#{table_key}'"
       end
 
       table_value[:constraints][:mismatching].each do |constraint|
-        _warn "Constraint '#{constraint}' does not match between schemas", 'Diff11' # TODO: fix this message
+        print_mismatching "Constraint '#{constraint}' in table '#{table_key}'"
       end
 
       # indexes
       table_value[:indexes][:missing].each do |index|
-        _warn "Index '#{index}' does not exist in schema '#{source_schema}'", 'Diff12'
+        print_missing "Index '#{index}' in table '#{table_key}'"
       end
 
       table_value[:indexes][:extra].each do |index|
-        _warn "Index '#{index}' exists in '#{source_schema}' but does not exist in schema '#{target_schema}'", 'Diff13'
+        print_extra "Index '#{index}' in table '#{table_key}'"
       end
 
       table_value[:indexes][:mismatching].each do |index|
-        _warn "Index '#{index}' does not match between schemas", 'Diff14' # TODO: fix this message
+        print_mismatching "Index '#{index}' in table '#{table_key}'"
       end
 
     end
+  end
 
+  def self.print_extra (message)
+    puts "+ #{message}".green.bold
+  end
+
+  def self.print_missing (message)
+    puts "- #{message}".red.bold
+  end
+
+  def self.print_mismatching (message)
+    puts "? #{message}".yellow.bold
   end
 
 end
