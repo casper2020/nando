@@ -1,7 +1,7 @@
 module NandoSchemaDiff
 
   def self.diff_schemas (source_schema, target_schema)
-    db_connection = NandoMigrator.get_database_connection();
+    db_connection = NandoMigrator.get_database_connection()
 
     # results = db_connection.exec("\\d") # DOES NOT WORK
 
@@ -65,15 +65,18 @@ module NandoSchemaDiff
 
   def self.get_schema_structure (curr_schema)
     schema_structure = {}
-    db_connection = NandoMigrator.get_database_connection();
+    db_connection = NandoMigrator.get_database_connection()
 
     # TODO: reduce these SELECT * to specific columns
 
     # get all tables in a schema
     results = db_connection.exec("
-      SELECT *
-        FROM information_schema.tables
-       WHERE table_schema = '#{curr_schema}';
+      SELECT nspname AS table_schema,
+             relname AS table_name
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE relkind = 'r'
+         AND nspname = '#{curr_schema}'
     ")
 
     for row in results do
@@ -89,7 +92,7 @@ module NandoSchemaDiff
     results = db_connection.exec("
       SELECT *
         FROM information_schema.columns
-       WHERE table_schema = '#{curr_schema}';
+       WHERE table_schema = '#{curr_schema}'
     ")
 
     for row in results do
@@ -105,7 +108,7 @@ module NandoSchemaDiff
     results = db_connection.exec("
       SELECT *
         FROM information_schema.triggers
-       WHERE event_object_schema = '#{curr_schema}';
+       WHERE event_object_schema = '#{curr_schema}'
     ")
 
     for row in results do
@@ -127,7 +130,7 @@ module NandoSchemaDiff
         FROM pg_catalog.pg_constraint con
         JOIN pg_catalog.pg_class rel ON rel.oid = con.conrelid
         JOIN pg_catalog.pg_namespace nsp ON nsp.oid = connamespace
-       WHERE nsp.nspname = '#{curr_schema}';
+       WHERE nsp.nspname = '#{curr_schema}'
     ")
 
     for row in results do
@@ -140,7 +143,7 @@ module NandoSchemaDiff
     results = db_connection.exec("
       SELECT *
         FROM pg_catalog.pg_indexes
-       WHERE schemaname = '#{curr_schema}';
+       WHERE schemaname = '#{curr_schema}'
     ")
 
     for row in results do
