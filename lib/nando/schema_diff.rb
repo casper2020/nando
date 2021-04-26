@@ -56,9 +56,7 @@ module NandoSchemaDiff
 
     # TODO: what to do about views, types, etc
 
-    puts ""
     print_diff_info(source_info, source_schema, target_schema)
-    puts ""
     print_diff_info(target_info, target_schema, source_schema)
     puts ""
   end
@@ -391,7 +389,7 @@ module NandoSchemaDiff
 
 
   def self.print_diff_info (info, source_schema, target_schema)
-    puts "Comparing '#{source_schema}' to '#{target_schema}'".magenta.bold
+    puts "\nComparing '#{source_schema}' to '#{target_schema}'".magenta.bold
 
     info[:tables][:missing].each do |table|
       print_missing "Table '#{table}'"
@@ -460,7 +458,7 @@ module NandoSchemaDiff
   end
 
   def self.print_diff_info_v2 (info, source_schema, target_schema)
-    puts "Comparing '#{source_schema}' to '#{target_schema}'".magenta.bold
+    puts "\nComparing '#{source_schema}' to '#{target_schema}'".magenta.bold
 
     info[:tables][:extra].each do |table|
       print_extra "Table '#{table}'"
