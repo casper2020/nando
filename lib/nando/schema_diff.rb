@@ -1,9 +1,6 @@
 module NandoSchemaDiff
 
   def self.diff_schemas (source_schema, target_schema)
-    db_connection = NandoMigrator.get_database_connection()
-
-    # results = db_connection.exec("\\d") # DOES NOT WORK
 
     source_info = get_info_base_structure()
     target_info = get_info_base_structure()
