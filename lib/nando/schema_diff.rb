@@ -391,100 +391,8 @@ module NandoSchemaDiff
   def self.print_diff_info (info, source_schema, target_schema)
     puts "\nComparing '#{source_schema}' to '#{target_schema}'".magenta.bold
 
-    info[:tables][:missing].each do |table|
-      print_missing "Table '#{table}'"
-    end
-
     info[:tables][:extra].each do |table|
       print_extra "Table '#{table}'"
-    end
-
-    # iterate over all tables with info
-    info[:tables][:mismatching].each do |table_key, table_value|
-
-      # columns
-      table_value[:columns][:missing].each do |column|
-        print_missing "Column '#{column}' in table '#{table_key}'"
-      end
-
-      table_value[:columns][:extra].each do |column|
-        print_extra "Column '#{column}' in table '#{table_key}'"
-      end
-
-      table_value[:columns][:mismatching].each do |column|
-        print_mismatching "Column '#{column}' in table '#{table_key}'"
-      end
-
-      # triggers
-      table_value[:triggers][:missing].each do |trigger|
-        print_missing "Trigger '#{trigger}' in table '#{table_key}'"
-      end
-
-      table_value[:triggers][:extra].each do |trigger|
-        print_extra "Trigger '#{trigger}' in table '#{table_key}'"
-      end
-
-      table_value[:triggers][:mismatching].each do |trigger|
-        print_mismatching "Trigger '#{trigger}' in table '#{table_key}'"
-      end
-
-      # constraints
-      table_value[:constraints][:missing].each do |constraint|
-        print_missing "Constraint '#{constraint}' in table '#{table_key}'"
-      end
-
-      table_value[:constraints][:extra].each do |constraint|
-        print_extra "Constraint '#{constraint}' in table '#{table_key}'"
-      end
-
-      table_value[:constraints][:mismatching].each do |constraint|
-        print_mismatching "Constraint '#{constraint}' in table '#{table_key}'"
-      end
-
-      # indexes
-      table_value[:indexes][:missing].each do |index|
-        print_missing "Index '#{index}' in table '#{table_key}'"
-      end
-
-      table_value[:indexes][:extra].each do |index|
-        print_extra "Index '#{index}' in table '#{table_key}'"
-      end
-
-      table_value[:indexes][:mismatching].each do |index|
-        print_mismatching "Index '#{index}' in table '#{table_key}'"
-      end
-
-    end
-  end
-
-  def self.print_diff_info_v2 (info, source_schema, target_schema)
-    puts "\nComparing '#{source_schema}' to '#{target_schema}'".magenta.bold
-
-    info[:tables][:extra].each do |table|
-      print_extra "Table '#{table}'"
-    end
-
-    # iterate over all tables with info
-    info[:tables][:mismatching].each do |table_key, table_value|
-      # columns
-      table_value[:columns][:extra].each do |column|
-        print_extra "Column '#{column}' in table '#{table_key}'"
-      end
-
-      # triggers
-      table_value[:triggers][:extra].each do |trigger|
-        print_extra "Trigger '#{trigger}' in table '#{table_key}'"
-      end
-
-      # constraints
-      table_value[:constraints][:extra].each do |constraint|
-        print_extra "Constraint '#{constraint}' in table '#{table_key}'"
-      end
-
-      # indexes
-      table_value[:indexes][:extra].each do |index|
-        print_extra "Index '#{index}' in table '#{table_key}'"
-      end
     end
 
     info[:tables][:missing].each do |table|
@@ -493,48 +401,60 @@ module NandoSchemaDiff
 
     # iterate over all tables with info
     info[:tables][:mismatching].each do |table_key, table_value|
+      print_mismatching "Table '#{table_key}'"
+
       # columns
+      table_value[:columns][:extra].each do |column|
+        print_extra "  Column '#{column}'"
+      end
+
       table_value[:columns][:missing].each do |column|
-        print_missing "Column '#{column}' in table '#{table_key}'"
+        print_missing "  Column '#{column}'"
       end
 
-      # triggers
-      table_value[:triggers][:missing].each do |trigger|
-        print_missing "Trigger '#{trigger}' in table '#{table_key}'"
-      end
-
-      # constraints
-      table_value[:constraints][:missing].each do |constraint|
-        print_missing "Constraint '#{constraint}' in table '#{table_key}'"
-      end
-
-      # indexes
-      table_value[:indexes][:missing].each do |index|
-        print_missing "Index '#{index}' in table '#{table_key}'"
-      end
-    end
-
-    # iterate over all tables with info
-    info[:tables][:mismatching].each do |table_key, table_value|
-      # columns
       table_value[:columns][:mismatching].each do |column|
-        print_mismatching "Column '#{column}' in table '#{table_key}'"
+        print_mismatching "  Column '#{column}'"
       end
 
       # triggers
+      table_value[:triggers][:extra].each do |trigger|
+        print_extra "  Trigger '#{trigger}'"
+      end
+
+      table_value[:triggers][:missing].each do |trigger|
+        print_missing "  Trigger '#{trigger}'"
+      end
+
       table_value[:triggers][:mismatching].each do |trigger|
-        print_mismatching "Trigger '#{trigger}' in table '#{table_key}'"
+        print_mismatching "  Trigger '#{trigger}'"
       end
 
       # constraints
+      table_value[:constraints][:extra].each do |constraint|
+        print_extra "  Constraint '#{constraint}'"
+      end
+
+      table_value[:constraints][:missing].each do |constraint|
+        print_missing "  Constraint '#{constraint}'"
+      end
+
       table_value[:constraints][:mismatching].each do |constraint|
-        print_mismatching "Constraint '#{constraint}' in table '#{table_key}'"
+        print_mismatching "  Constraint '#{constraint}'"
       end
 
       # indexes
-      table_value[:indexes][:mismatching].each do |index|
-        print_mismatching "Index '#{index}' in table '#{table_key}'"
+      table_value[:indexes][:extra].each do |index|
+        print_extra "  Index '#{index}'"
       end
+
+      table_value[:indexes][:missing].each do |index|
+        print_missing "  Index '#{index}'"
+      end
+
+      table_value[:indexes][:mismatching].each do |index|
+        print_mismatching "  Index '#{index}'"
+      end
+
     end
   end
 
