@@ -11,44 +11,44 @@ module NandoSchemaDiff
     # start comparing structure
 
     # checking for different tables
-    check_different_tables(source, target, source_info, target_info)
-    check_different_tables(target, source, target_info, source_info)
+    check_different_tables(source[:tables], target[:tables], source_info, target_info)
+    check_different_tables(target[:tables], source[:tables], target_info, source_info)
 
 
     # checking for different columns in all shared tables
-    check_different_columns(source, target, source_info, target_info)
-    check_different_columns(target, source, target_info, source_info)
+    check_different_columns(source[:tables], target[:tables], source_info, target_info)
+    check_different_columns(target[:tables], source[:tables], target_info, source_info)
 
     # checking for mismatching columns in all shared tables
-    check_mismatching_columns(source, target, source_info, target_info)
-    check_mismatching_columns(target, source, target_info, source_info)
+    check_mismatching_columns(source[:tables], target[:tables], source_info, target_info)
+    check_mismatching_columns(target[:tables], source[:tables], target_info, source_info)
 
 
     # checking for different triggers in all shared tables
-    check_different_triggers(source, target, source_info, target_info)
-    check_different_triggers(target, source, target_info, source_info)
+    check_different_triggers(source[:tables], target[:tables], source_info, target_info)
+    check_different_triggers(target[:tables], source[:tables], target_info, source_info)
 
     # checking for mismatching triggers in all shared tables
-    check_mismatching_triggers(source, target, source_info, target_info)
-    check_mismatching_triggers(target, source, target_info, source_info)
+    check_mismatching_triggers(source[:tables], target[:tables], source_info, target_info)
+    check_mismatching_triggers(target[:tables], source[:tables], target_info, source_info)
 
 
     # checking for different constraints in all shared tables
-    check_different_constraints(source, target, source_info, target_info)
-    check_different_constraints(target, source, target_info, source_info)
+    check_different_constraints(source[:tables], target[:tables], source_info, target_info)
+    check_different_constraints(target[:tables], source[:tables], target_info, source_info)
 
     # checking for mismatching constraints in all shared tables
-    check_mismatching_constraints(source, target, source_info, target_info)
-    check_mismatching_constraints(target, source, target_info, source_info)
+    check_mismatching_constraints(source[:tables], target[:tables], source_info, target_info)
+    check_mismatching_constraints(target[:tables], source[:tables], target_info, source_info)
 
 
     # checking for different indexes in all shared tables
-    check_different_indexes(source, target, source_info, target_info)
-    check_different_indexes(target, source, target_info, source_info)
+    check_different_indexes(source[:tables], target[:tables], source_info, target_info)
+    check_different_indexes(target[:tables], source[:tables], target_info, source_info)
 
     # checking for mismatching indexes in all shared tables
-    check_mismatching_indexes(source, target, source_info, target_info)
-    check_mismatching_indexes(target, source, target_info, source_info)
+    check_mismatching_indexes(source[:tables], target[:tables], source_info, target_info)
+    check_mismatching_indexes(target[:tables], source[:tables], target_info, source_info)
 
 
     # TODO: what to do about views, types, etc
@@ -59,7 +59,10 @@ module NandoSchemaDiff
   end
 
   def self.get_schema_structure (curr_schema)
-    schema_structure = {}
+    schema_structure = {
+      :tables => {},
+      :views => {}
+    }
     db_connection = NandoMigrator.get_database_connection()
 
     # TODO: reduce these SELECT * to specific columns
@@ -75,7 +78,7 @@ module NandoSchemaDiff
     ")
 
     for row in results do
-      schema_structure[row['table_name']] = {
+      schema_structure[:tables][row['table_name']] = {
         :columns      => {},
         :triggers     => {},
         :constraints  => {},
@@ -91,7 +94,7 @@ module NandoSchemaDiff
     ")
 
     for row in results do
-      schema_structure[row['table_name']][:columns][row['column_name']] = {
+      schema_structure[:tables][row['table_name']][:columns][row['column_name']] = {
         :ordinal_position   => row['ordinal_position'],
         :column_default     => row['column_default'].nil? ? row['column_default'] : row['column_default'].gsub(curr_schema, ''), # remove the schema, since sequences include it in their name
         :is_nullable        => row['is_nullable'],
@@ -107,7 +110,7 @@ module NandoSchemaDiff
     ")
 
     for row in results do
-      schema_structure[row['event_object_table']][:triggers][row['trigger_name']] = {
+      schema_structure[:tables][row['event_object_table']][:triggers][row['trigger_name']] = {
         :event_manipulation   => row['event_manipulation'],
         :action_order         => row['action_order'],
         :action_condition     => row['action_condition'],
@@ -129,7 +132,7 @@ module NandoSchemaDiff
     ")
 
     for row in results do
-      schema_structure[row['table_name']][:constraints][row['constraint_name']] = {
+      schema_structure[:tables][row['table_name']][:constraints][row['constraint_name']] = {
         :constraint_source   => row['constraint_source']
       }
     end
@@ -142,7 +145,7 @@ module NandoSchemaDiff
     ")
 
     for row in results do
-      schema_structure[row['tablename']][:indexes][row['indexname']] = {
+      schema_structure[:tables][row['tablename']][:indexes][row['indexname']] = {
         :tablespace     => row['tablespace'],
         :indexdef       => row['indexdef'].gsub(curr_schema, ''), # remove the schema, since indexes include it in their definition
       }
