@@ -75,6 +75,19 @@ _info 'TESTING'
 grep -i -e "execute <<-([.\n]*)CREATE OR REPLACE FUNCTION common.document_settings_for_print" ./db/migrate/*
 
 
+r = ordinary table
+i = index
+v = view
+
+
+S = sequence
+
+m = materialized view
+c = composite type
+t = TOAST table
+f = foreign table
+
+
 TEMPORARY NOTES
 
 
