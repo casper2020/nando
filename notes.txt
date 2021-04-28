@@ -88,6 +88,9 @@ t = TOAST table
 f = foreign table
 
 
+Starting psql with "psql -E" let's you see the queries executed in \d for example
+
+
 TEMPORARY NOTES
 
 

@@ -1,5 +1,7 @@
 module NandoSchemaDiff
 
+  @schema_name_placeholder = '___SCHEMANAME___'
+
   def self.diff_schemas (source_schema, target_schema)
 
     source_info = get_info_base_structure()
@@ -7,9 +9,6 @@ module NandoSchemaDiff
 
     source = get_schema_structure(source_schema)
     target = get_schema_structure(target_schema)
-
-    puts source[:views]
-    puts target[:views]
 
     # start comparing structure
 
@@ -73,16 +72,16 @@ module NandoSchemaDiff
     # get all tables/views in the schema
     results = db_connection.exec("
       SELECT n.nspname AS table_schema,
-             c.relname AS table_name,
-             c.relkind AS table_type
-        FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-       WHERE c.relkind IN ('r', 'v')
+             t.relname AS table_name,
+             t.relkind AS table_type
+        FROM pg_class t
+        JOIN pg_namespace n ON n.oid = t.relnamespace
+       WHERE t.relkind IN ('r', 'v')
          AND n.nspname = '#{curr_schema}'
     ")
 
     for row in results do
-      table_type = row['table_type'] == 'r' ? :tables : :views # TODO: currently using same info for table/view columns, this may change
+      table_type = row['table_type'] == 'r' ? :tables : :views
       schema_structure[table_type][row['table_name']] = {
         :columns      => {},
         :triggers     => {},
@@ -94,24 +93,24 @@ module NandoSchemaDiff
     # get all columns for each table/view
     results = db_connection.exec("
       SELECT n.nspname      AS table_schema,
-             c.relname      AS table_name,
-             c.relkind      AS table_type,
+             t.relname      AS table_name,
+             t.relkind      AS table_type,
              a.attname      AS column_name,
              a.attnum       AS column_num,
              a.atthasdef    AS column_default,
              a.attnotnull   AS column_not_null,
              pg_catalog.format_type(a.atttypid, a.atttypmod) AS column_datatype
         FROM pg_catalog.pg_attribute a
-        JOIN pg_catalog.pg_class c ON a.attrelid = c.oid
-        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+        JOIN pg_catalog.pg_class t ON a.attrelid = t.oid
+        JOIN pg_catalog.pg_namespace n ON n.oid = t.relnamespace
        WHERE a.attnum > 0
          AND NOT a.attisdropped
-         AND c.relkind IN ('r', 'v')
+         AND t.relkind IN ('r', 'v')
          AND n.nspname = '#{curr_schema}'
     ")
 
     for row in results do
-      table_type = row['table_type'] == 'r' ? :tables : :views # TODO: currently using same info for table/view columns, this may change
+      table_type = row['table_type'] == 'r' ? :tables : :views
       schema_structure[table_type][row['table_name']][:columns][row['column_name']] = {
         :column_num         => row['column_num'],
         :column_default     => row['column_default'].nil? ? row['column_default'] : row['column_default'].gsub(curr_schema, ''), # remove the schema, since sequences include it in their name
@@ -122,50 +121,74 @@ module NandoSchemaDiff
 
     # get all triggers for each table
     results = db_connection.exec("
-      SELECT *
-        FROM information_schema.triggers
-       WHERE event_object_schema = '#{curr_schema}'
+      SELECT n.nspname      AS table_schema,
+             t.relname      AS table_name,
+             t.relkind      AS table_type,
+             tr.tgname      AS trigger_name,
+             pg_catalog.pg_get_triggerdef(tr.oid, true) AS trigger_definition
+        FROM pg_catalog.pg_trigger tr
+        JOIN pg_catalog.pg_class t ON tr.tgrelid = t.oid
+        JOIN pg_catalog.pg_namespace n ON n.oid = t.relnamespace
+       WHERE t.relkind IN ('r', 'v')
+         AND (NOT tr.tgisinternal OR (tr.tgisinternal AND tr.tgenabled = 'D'))
+         AND n.nspname = '#{curr_schema}'
     ")
 
     for row in results do
-      schema_structure[:tables][row['event_object_table']][:triggers][row['trigger_name']] = {
-        :event_manipulation   => row['event_manipulation'],
-        :action_order         => row['action_order'],
-        :action_condition     => row['action_condition'],
-        :action_statement     => row['action_statement'],
-        :action_orientation   => row['action_orientation'],
-        :action_timing        => row['action_timing']
+      table_type = row['table_type'] == 'r' ? :tables : :views
+      schema_structure[table_type][row['table_name']][:triggers][row['trigger_name']] = {
+        :trigger_definition => row['trigger_definition'].gsub(curr_schema, @schema_name_placeholder) # replace the schema with a value to later replace, to create the trigger definition on the new schema
       }
     end
 
     # get all constraints for each table
+    # TODO: this will get face some issues with VFK to public_companies (that logic is specific to CW, but might make an exception)
     results = db_connection.exec("
-      SELECT rel.relname AS table_name,
+      SELECT n.nspname   AS table_schema,
+             t.relname   AS table_name,
+             t.relkind   AS table_type,
              con.conname AS constraint_name,
-             con.consrc  AS constraint_source
+             con.consrc  AS constraint_source,
+             pg_get_constraintdef(con.oid, true) AS constraint_definition
         FROM pg_catalog.pg_constraint con
-        JOIN pg_catalog.pg_class rel ON rel.oid = con.conrelid
-        JOIN pg_catalog.pg_namespace nsp ON nsp.oid = connamespace
-       WHERE nsp.nspname = '#{curr_schema}'
+        JOIN pg_catalog.pg_class t ON con.conrelid = t.oid
+        JOIN pg_catalog.pg_namespace n ON n.oid = t.relnamespace
+       WHERE t.relkind IN ('r', 'v')
+         AND n.nspname = '#{curr_schema}'
     ")
 
     for row in results do
-      schema_structure[:tables][row['table_name']][:constraints][row['constraint_name']] = {
-        :constraint_source   => row['constraint_source']
+      table_type = row['table_type'] == 'r' ? :tables : :views
+      schema_structure[table_type][row['table_name']][:constraints][row['constraint_name']] = {
+        :constraint_source      => row['constraint_source'],
+        :constraint_definition  => row['constraint_definition']
       }
     end
 
     # get all indexes for each table
     results = db_connection.exec("
-      SELECT *
-        FROM pg_catalog.pg_indexes
-       WHERE schemaname = '#{curr_schema}'
+      SELECT n.nspname    AS table_schema,
+             t.relname    AS table_name,
+             t.relkind    AS table_type,
+             i.relname    AS index_name,
+             pg_catalog.pg_get_indexdef(ix.indexrelid, 0, true) AS index_definition,
+             array_to_string(array_agg(a.attname), ', ') AS index_columns
+        FROM pg_catalog.pg_index ix
+        JOIN pg_catalog.pg_class i ON ix.indexrelid = i.oid
+        JOIN pg_catalog.pg_class t ON ix.indrelid = t.oid
+        JOIN pg_catalog.pg_attribute a ON a.attrelid = t.oid
+        JOIN pg_catalog.pg_namespace n ON n.oid = t.relnamespace
+       WHERE t.relkind IN ('r', 'v')
+         AND a.attnum = ANY(ix.indkey)
+         AND n.nspname = '#{curr_schema}'
+       GROUP BY 1, 2, 3, 4, 5
     ")
 
     for row in results do
-      schema_structure[:tables][row['tablename']][:indexes][row['indexname']] = {
-        :tablespace     => row['tablespace'],
-        :indexdef       => row['indexdef'].gsub(curr_schema, ''), # remove the schema, since indexes include it in their definition
+      table_type = row['table_type'] == 'r' ? :tables : :views
+      schema_structure[table_type][row['table_name']][:indexes][row['index_name']] = {
+        :index_definition     => row['index_definition'].gsub(curr_schema, @schema_name_placeholder), # replace the schema with a value to later replace, to create the trigger definition on the new schema
+        :index_columns        => row['index_columns']
       }
     end
 
