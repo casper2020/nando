@@ -20,6 +20,10 @@ module NandoSchemaDiff
     check_different_tables(source[:tables], target[:tables], source_info, target_info)
     check_different_tables(target[:tables], source[:tables], target_info, source_info)
 
+    # checking for different views
+    check_different_views(source[:views], target[:views], source_info, target_info)
+    check_different_views(target[:views], source[:views], target_info, source_info)
+
 
     # checking for different columns in all shared tables
     check_different_columns(source[:tables], target[:tables], source_info, target_info)
@@ -206,7 +210,9 @@ module NandoSchemaDiff
         :mismatching => {}
       },
       :views => {
-        # not currently used, but reserved for now
+        :missing => [],
+        :extra => [],
+        :mismatching => {}
       }
     }
   end
@@ -248,6 +254,18 @@ module NandoSchemaDiff
 
     if keys_diff = right_schema.keys - left_schema.keys
       left_info[:tables][:missing] += keys_diff
+    end
+  end
+
+  # views comparison
+  # TODO: might merge with above, if they stay similiar
+  def self.check_different_views (left_schema, right_schema, left_info, right_info)
+    if keys_diff = left_schema.keys - right_schema.keys
+      left_info[:views][:extra] += keys_diff
+    end
+
+    if keys_diff = right_schema.keys - left_schema.keys
+      left_info[:views][:missing] += keys_diff
     end
   end
 
@@ -586,6 +604,18 @@ module NandoSchemaDiff
         print_mismatching "  Index '#{index}'"
       end
 
+    end
+
+    info[:views][:extra].each do |view|
+      print_extra "View '#{view}'"
+    end
+
+    info[:views][:missing].each do |view|
+      print_missing "View '#{view}'"
+    end
+
+    info[:views][:mismatching].each do |view|
+      print_mismatching "View '#{view}'"
     end
   end
 
