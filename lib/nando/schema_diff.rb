@@ -89,8 +89,7 @@ module NandoSchemaDiff
     ")
 
     for row in results do
-      table_type = row['table_type'] == 'r' ? :tables : :views
-      schema_structure[table_type][row['table_name']] = {
+      schema_structure[TABLE_TYPE[row['table_type']]][row['table_name']] = {
         :columns      => {},
         :triggers     => {},
         :constraints  => {},
@@ -118,8 +117,7 @@ module NandoSchemaDiff
     ")
 
     for row in results do
-      table_type = row['table_type'] == 'r' ? :tables : :views
-      schema_structure[table_type][row['table_name']][:columns][row['column_name']] = {
+      schema_structure[TABLE_TYPE[row['table_type']]][row['table_name']][:columns][row['column_name']] = {
         :column_num         => row['column_num'],
         :column_default     => row['column_default'].nil? ? row['column_default'] : row['column_default'].gsub(curr_schema, ''), # remove the schema, since sequences include it in their name
         :column_not_null    => row['column_not_null'],
@@ -143,8 +141,7 @@ module NandoSchemaDiff
     ")
 
     for row in results do
-      table_type = row['table_type'] == 'r' ? :tables : :views
-      schema_structure[table_type][row['table_name']][:triggers][row['trigger_name']] = {
+      schema_structure[TABLE_TYPE[row['table_type']]][row['table_name']][:triggers][row['trigger_name']] = {
         :trigger_definition => row['trigger_definition'].gsub(curr_schema, SCHEMA_PLACEHOLDER) # replace the schema with a value to later replace, to create the trigger definition on the new schema
       }
     end
@@ -166,8 +163,7 @@ module NandoSchemaDiff
     ")
 
     for row in results do
-      table_type = row['table_type'] == 'r' ? :tables : :views
-      schema_structure[table_type][row['table_name']][:constraints][row['constraint_name']] = {
+      schema_structure[TABLE_TYPE[row['table_type']]][row['table_name']][:constraints][row['constraint_name']] = {
         :constraint_source      => row['constraint_source'],
         :constraint_definition  => row['constraint_definition']
       }
@@ -193,8 +189,7 @@ module NandoSchemaDiff
     ")
 
     for row in results do
-      table_type = row['table_type'] == 'r' ? :tables : :views
-      schema_structure[table_type][row['table_name']][:indexes][row['index_name']] = {
+      schema_structure[TABLE_TYPE[row['table_type']]][row['table_name']][:indexes][row['index_name']] = {
         :index_definition     => row['index_definition'].gsub(curr_schema, SCHEMA_PLACEHOLDER), # replace the schema with a value to later replace, to create the trigger definition on the new schema
         :index_columns        => row['index_columns']
       }
