@@ -1,6 +1,10 @@
 module NandoSchemaDiff
 
-  @schema_name_placeholder = '___SCHEMANAME___'
+  SCHEMA_PLACEHOLDER = '___SCHEMANAME___'
+  TABLE_TYPE = {
+    'r' => :tables,
+    'v' => :views
+  }
 
   def self.diff_schemas (source_schema, target_schema)
 
@@ -57,6 +61,10 @@ module NandoSchemaDiff
 
     print_diff_info(source_info, source_schema, target_schema)
     print_diff_info(target_info, target_schema, source_schema)
+    puts ""
+
+    suggestion_schema_corrections(source_info, source_schema, target_schema)
+    suggestion_schema_corrections(target_info, target_schema, source_schema)
     puts ""
   end
 
@@ -137,7 +145,7 @@ module NandoSchemaDiff
     for row in results do
       table_type = row['table_type'] == 'r' ? :tables : :views
       schema_structure[table_type][row['table_name']][:triggers][row['trigger_name']] = {
-        :trigger_definition => row['trigger_definition'].gsub(curr_schema, @schema_name_placeholder) # replace the schema with a value to later replace, to create the trigger definition on the new schema
+        :trigger_definition => row['trigger_definition'].gsub(curr_schema, SCHEMA_PLACEHOLDER) # replace the schema with a value to later replace, to create the trigger definition on the new schema
       }
     end
 
@@ -187,7 +195,7 @@ module NandoSchemaDiff
     for row in results do
       table_type = row['table_type'] == 'r' ? :tables : :views
       schema_structure[table_type][row['table_name']][:indexes][row['index_name']] = {
-        :index_definition     => row['index_definition'].gsub(curr_schema, @schema_name_placeholder), # replace the schema with a value to later replace, to create the trigger definition on the new schema
+        :index_definition     => row['index_definition'].gsub(curr_schema, SCHEMA_PLACEHOLDER), # replace the schema with a value to later replace, to create the trigger definition on the new schema
         :index_columns        => row['index_columns']
       }
     end
@@ -428,6 +436,88 @@ module NandoSchemaDiff
     end
   end
 
+
+  def self.suggestion_schema_corrections (info, source_schema, target_schema)
+    puts "\nSuggestion to turn '#{source_schema}' into '#{target_schema}'".magenta.bold
+
+    # TODO: will remove colors in the end, just here to list commands that are "ready"
+
+    info[:tables][:extra].each do |table|
+      puts "\nDROP TABLE IF EXISTS #{source_schema}.#{table};".green.bold
+    end
+
+    info[:tables][:missing].each do |table|
+      puts "\nTODO: MISSING TABLE"
+    end
+
+    # iterate over all tables with info
+    info[:tables][:mismatching].each do |table_key, table_value|
+      puts "\nTODO: MISMATCHING TABLE #{table_key}".yellow.bold
+
+      alter_tables = [];
+
+      # columns
+      table_value[:columns][:extra].each do |column|
+        alter_tables << "DROP COLUMN IF EXISTS #{column}"
+      end
+
+      table_value[:columns][:missing].each do |column|
+        puts "  TODO: MISSING COLUMN"
+      end
+
+      table_value[:columns][:mismatching].each do |column|
+        puts "  TODO: MISMATCHING COLUMN"
+      end
+
+      # triggers
+      table_value[:triggers][:extra].each do |trigger|
+        puts "  DROP TRIGGER IF EXISTS #{trigger} ON #{source_schema}.#{table_key};".green.bold
+      end
+
+      table_value[:triggers][:missing].each do |trigger|
+        puts "  TODO: MISSING TRIGGER"
+      end
+
+      table_value[:triggers][:mismatching].each do |trigger|
+        puts "  TODO: MISMATCHING TRIGGER"
+      end
+
+      # constraints
+      table_value[:constraints][:extra].each do |constraint|
+        alter_tables << "DROP CONSTRAINT IF EXISTS '#{constraint}'"
+      end
+
+      table_value[:constraints][:missing].each do |constraint|
+        puts "  TODO: MISSING CONSTRAINT"
+      end
+
+      table_value[:constraints][:mismatching].each do |constraint|
+        puts "  TODO: MISMATCHING CONSTRAINT"
+      end
+
+      # indexes
+      table_value[:indexes][:extra].each do |index|
+        puts "  DROP INDEX IF EXISTS #{source_schema}.#{index};".green.bold
+      end
+
+      table_value[:indexes][:missing].each do |index|
+        puts "  TODO: MISSING INDEX"
+      end
+
+      table_value[:indexes][:mismatching].each do |index|
+        puts "  TODO: MISMATCHING INDEX"
+      end
+
+      # print all alter table commands necessary
+      if alter_tables.length > 0
+        puts "ALTER TABLE #{source_schema}.#{table_key}".green.bold
+        alter_tables.each_with_index do |command, index|
+          terminator = (index == alter_tables.length - 1) ? ';' : ',';
+          puts "  #{command}#{terminator}".green.bold
+        end
+      end
+    end
+  end
 
   def self.print_diff_info (info, source_schema, target_schema)
     puts "\nComparing '#{source_schema}' to '#{target_schema}'".magenta.bold
