@@ -440,8 +440,6 @@ module NandoSchemaDiff
   def self.suggestion_schema_corrections (info, source_schema, target_schema)
     puts "\nSuggestion to turn '#{source_schema}' into '#{target_schema}'".magenta.bold
 
-    # TODO: will remove colors in the end, just here to list commands that are "ready"
-
     info[:tables][:extra].each do |table|
       puts "\nDROP TABLE IF EXISTS #{source_schema}.#{table};".green.bold
     end
@@ -454,6 +452,7 @@ module NandoSchemaDiff
     info[:tables][:mismatching].each do |table_key, table_value|
       puts "\nTODO: MISMATCHING TABLE #{table_key}".yellow.bold
 
+      isolated_commands = [];
       alter_tables = [];
 
       # columns
@@ -471,7 +470,7 @@ module NandoSchemaDiff
 
       # triggers
       table_value[:triggers][:extra].each do |trigger|
-        puts "  DROP TRIGGER IF EXISTS #{trigger} ON #{source_schema}.#{table_key};".green.bold
+        isolated_commands << "DROP TRIGGER IF EXISTS #{trigger} ON #{source_schema}.#{table_key}"
       end
 
       table_value[:triggers][:missing].each do |trigger|
@@ -497,7 +496,7 @@ module NandoSchemaDiff
 
       # indexes
       table_value[:indexes][:extra].each do |index|
-        puts "  DROP INDEX IF EXISTS #{source_schema}.#{index};".green.bold
+        isolated_commands << "DROP INDEX IF EXISTS #{source_schema}.#{index}"
       end
 
       table_value[:indexes][:missing].each do |index|
@@ -506,6 +505,12 @@ module NandoSchemaDiff
 
       table_value[:indexes][:mismatching].each do |index|
         puts "  TODO: MISMATCHING INDEX"
+      end
+
+      # TODO: will remove colors in the end, just here to list commands that are "ready"
+      # print all isolated commands
+      isolated_commands.each do |command|
+        puts "#{command};".green.bold
       end
 
       # print all alter table commands necessary
