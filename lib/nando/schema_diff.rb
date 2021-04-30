@@ -66,10 +66,6 @@ module NandoSchemaDiff
     print_diff_info(source_info, source_schema, target_schema)
     print_diff_info(target_info, target_schema, source_schema)
     puts ""
-
-    suggestion_schema_corrections(source_info, source_schema, target_schema)
-    suggestion_schema_corrections(target_info, target_schema, source_schema)
-    puts ""
   end
 
   def self.get_schema_structure (curr_schema)
@@ -450,89 +446,37 @@ module NandoSchemaDiff
   end
 
 
-  def self.suggestion_schema_corrections (info, source_schema, target_schema)
+  def self.schema_correction_suggestion (source_schema, target_schema, drop_tables, create_tables, mismatching_tables)
     puts "\nSuggestion to turn '#{source_schema}' into '#{target_schema}'".magenta.bold
 
-    info[:tables][:extra].each do |table|
-      puts "\nDROP TABLE IF EXISTS #{source_schema}.#{table};".green.bold
+    # TODO: will remove colors in the end, just here to list commands that are "ready"
+
+    drop_tables.each do |command|
+      puts "\n#{command}".green.bold
     end
 
-    info[:tables][:missing].each do |table|
-      puts "\nTODO: MISSING TABLE"
+    create_tables.each do |command|
+      puts "\n#{command}"
     end
 
-    # iterate over all tables with info
-    info[:tables][:mismatching].each do |table_key, table_value|
-      puts "\nTODO: MISMATCHING TABLE #{table_key}".yellow.bold
-
-      isolated_commands = [];
-      alter_tables = [];
-
-      # columns
-      table_value[:columns][:extra].each do |column|
-        alter_tables << "DROP COLUMN IF EXISTS #{column}"
-      end
-
-      table_value[:columns][:missing].each do |column|
-        puts "  TODO: MISSING COLUMN"
-      end
-
-      table_value[:columns][:mismatching].each do |column|
-        puts "  TODO: MISMATCHING COLUMN"
-      end
-
-      # triggers
-      table_value[:triggers][:extra].each do |trigger|
-        isolated_commands << "DROP TRIGGER IF EXISTS #{trigger} ON #{source_schema}.#{table_key}"
-      end
-
-      table_value[:triggers][:missing].each do |trigger|
-        puts "  TODO: MISSING TRIGGER"
-      end
-
-      table_value[:triggers][:mismatching].each do |trigger|
-        puts "  TODO: MISMATCHING TRIGGER"
-      end
-
-      # constraints
-      table_value[:constraints][:extra].each do |constraint|
-        alter_tables << "DROP CONSTRAINT IF EXISTS '#{constraint}'"
-      end
-
-      table_value[:constraints][:missing].each do |constraint|
-        puts "  TODO: MISSING CONSTRAINT"
-      end
-
-      table_value[:constraints][:mismatching].each do |constraint|
-        puts "  TODO: MISMATCHING CONSTRAINT"
-      end
-
-      # indexes
-      table_value[:indexes][:extra].each do |index|
-        isolated_commands << "DROP INDEX IF EXISTS #{source_schema}.#{index}"
-      end
-
-      table_value[:indexes][:missing].each do |index|
-        puts "  TODO: MISSING INDEX"
-      end
-
-      table_value[:indexes][:mismatching].each do |index|
-        puts "  TODO: MISMATCHING INDEX"
-      end
-
-      # TODO: will remove colors in the end, just here to list commands that are "ready"
+    mismatching_tables.each do |table_key, table_value|
       # print all isolated commands
-      isolated_commands.each do |command|
+      table_value[:isolated_commands].each do |command|
         puts "#{command};".green.bold
       end
 
       # print all alter table commands necessary
-      if alter_tables.length > 0
+      if table_value[:alter_tables].length > 0
         puts "ALTER TABLE #{source_schema}.#{table_key}".green.bold
-        alter_tables.each_with_index do |command, index|
-          terminator = (index == alter_tables.length - 1) ? ';' : ',';
+        table_value[:alter_tables].each_with_index do |command, index|
+          terminator = (index == table_value[:alter_tables].length - 1) ? ';' : ',';
           puts "  #{command}#{terminator}".green.bold
         end
+      end
+
+      # print mismatching commands
+      table_value[:mismatching].each do |command|
+        puts "#{command};".yellow.bold
       end
     end
   end
@@ -540,68 +484,92 @@ module NandoSchemaDiff
   def self.print_diff_info (info, source_schema, target_schema)
     puts "\nComparing '#{source_schema}' to '#{target_schema}'".magenta.bold
 
+    drop_tables = []
+    create_tables = []
+    mismatching_tables = {}
+
     info[:tables][:extra].each do |table|
       print_extra "Table '#{table}'"
+      drop_tables << "DROP TABLE IF EXISTS #{source_schema}.#{table};"
     end
 
     info[:tables][:missing].each do |table|
       print_missing "Table '#{table}'"
+      create_tables << "TODO: MISSING TABLE"
     end
 
     # iterate over all tables with info
     info[:tables][:mismatching].each do |table_key, table_value|
       print_mismatching "Table '#{table_key}'"
 
+      mismatching_tables[table_key] = {
+        :isolated_commands => [],
+        :alter_tables => [],
+        :mismatching => []
+      }
+
       # columns
       table_value[:columns][:extra].each do |column|
         print_extra "  Column '#{column}'"
+        mismatching_tables[table_key][:alter_tables] << "DROP COLUMN IF EXISTS #{column}"
       end
 
       table_value[:columns][:missing].each do |column|
         print_missing "  Column '#{column}'"
+        mismatching_tables[table_key][:mismatching] << "TODO: MISSING COLUMN '#{column}'"
       end
 
       table_value[:columns][:mismatching].each do |column|
         print_mismatching "  Column '#{column}'"
+        mismatching_tables[table_key][:mismatching] << "TODO: MISMATCHING COLUMN '#{column}'"
       end
 
       # triggers
       table_value[:triggers][:extra].each do |trigger|
         print_extra "  Trigger '#{trigger}'"
+        mismatching_tables[table_key][:isolated_commands] << "DROP TRIGGER IF EXISTS #{trigger} ON #{source_schema}.#{table_key}"
       end
 
       table_value[:triggers][:missing].each do |trigger|
         print_missing "  Trigger '#{trigger}'"
+        mismatching_tables[table_key][:mismatching] << "TODO: MISSING TRIGGER '#{trigger}'"
       end
 
       table_value[:triggers][:mismatching].each do |trigger|
         print_mismatching "  Trigger '#{trigger}'"
+        mismatching_tables[table_key][:mismatching] << "TODO: MISMATCHING TRIGGER '#{trigger}'"
       end
 
       # constraints
       table_value[:constraints][:extra].each do |constraint|
         print_extra "  Constraint '#{constraint}'"
+        mismatching_tables[table_key][:alter_tables] << "DROP CONSTRAINT IF EXISTS '#{constraint}'"
       end
 
       table_value[:constraints][:missing].each do |constraint|
         print_missing "  Constraint '#{constraint}'"
+        mismatching_tables[table_key][:mismatching] << "TODO: MISSING CONSTRAINT '#{constraint}'"
       end
 
       table_value[:constraints][:mismatching].each do |constraint|
         print_mismatching "  Constraint '#{constraint}'"
+        mismatching_tables[table_key][:mismatching] << "TODO: MISMATCHING CONSTRAINT '#{constraint}'"
       end
 
       # indexes
       table_value[:indexes][:extra].each do |index|
         print_extra "  Index '#{index}'"
+        mismatching_tables[table_key][:isolated_commands] << "DROP INDEX IF EXISTS #{source_schema}.#{index}"
       end
 
       table_value[:indexes][:missing].each do |index|
         print_missing "  Index '#{index}'"
+        mismatching_tables[table_key][:mismatching] << "TODO: MISSING INDEX '#{index}'"
       end
 
       table_value[:indexes][:mismatching].each do |index|
         print_mismatching "  Index '#{index}'"
+        mismatching_tables[table_key][:mismatching] << "TODO: MISMATCHING INDEX '#{index}'"
       end
 
     end
@@ -617,6 +585,9 @@ module NandoSchemaDiff
     info[:views][:mismatching].each do |view|
       print_mismatching "View '#{view}'"
     end
+
+    # suggestions
+    schema_correction_suggestion(source_schema, target_schema, drop_tables, create_tables, mismatching_tables)
   end
 
   def self.print_extra (message)
