@@ -104,9 +104,12 @@ module NandoSchemaDiff
              t.relkind      AS table_type,
              a.attname      AS column_name,
              a.attnum       AS column_num,
-             a.atthasdef    AS column_default,
+             a.atthasdef    AS column_has_default,
              a.attnotnull   AS column_not_null,
-             pg_catalog.format_type(a.atttypid, a.atttypmod) AS column_datatype
+             pg_catalog.format_type(a.atttypid, a.atttypmod) AS column_datatype,
+             (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid) for 128)
+                FROM pg_catalog.pg_attrdef d
+               WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef) AS column_default
         FROM pg_catalog.pg_attribute a
         JOIN pg_catalog.pg_class t ON a.attrelid = t.oid
         JOIN pg_catalog.pg_namespace n ON n.oid = t.relnamespace
@@ -118,10 +121,11 @@ module NandoSchemaDiff
 
     for row in results do
       schema_structure[TABLE_TYPE[row['table_type']]][row['table_name']][:columns][row['column_name']] = {
-        :column_num         => row['column_num'],
-        :column_default     => row['column_default'].nil? ? row['column_default'] : row['column_default'].gsub(curr_schema, ''), # remove the schema, since sequences include it in their name
-        :column_not_null    => row['column_not_null'],
-        :column_datatype    => row['column_datatype']
+        :column_num           => row['column_num'],
+        :column_has_default   => row['column_has_default'],
+        :column_default       => row['column_default'].nil? ? row['column_default'] : row['column_default'].gsub(curr_schema, ''), # remove the schema, since sequences include it in their name
+        :column_not_null      => row['column_not_null'],
+        :column_datatype      => row['column_datatype']
       }
     end
 
@@ -218,7 +222,7 @@ module NandoSchemaDiff
     if info[:tables][:mismatching][table_name].nil?
       info[:tables][:mismatching][table_name] = {
         :columns => {
-          :missing => [],
+          :missing => {},
           :extra => [],
           :mismatching => [] # TODO: replace with hash
         },
@@ -282,7 +286,9 @@ module NandoSchemaDiff
 
       if keys_diff = right_schema[table_key][:columns].keys - left_schema[table_key][:columns].keys
         setup_table_info(left_info, table_key)
-        left_info[:tables][:mismatching][table_key][:columns][:missing] += keys_diff
+        keys_diff.each do |column_key|
+          left_info[:tables][:mismatching][table_key][:columns][:missing][column_key] = right_schema[table_key][:columns][column_key]
+        end
       end
     end
   end
@@ -514,9 +520,9 @@ module NandoSchemaDiff
         mismatching_tables[table_key][:alter_tables] << "DROP COLUMN IF EXISTS #{column}"
       end
 
-      table_value[:columns][:missing].each do |column|
-        print_missing "  Column '#{column}'"
-        mismatching_tables[table_key][:mismatching] << "TODO: MISSING COLUMN '#{column}'"
+      table_value[:columns][:missing].each do |column_key, column_value|
+        print_missing "  Column '#{column_key}'"
+        mismatching_tables[table_key][:alter_tables] << build_add_column_line(column_key, column_value)
       end
 
       table_value[:columns][:mismatching].each do |column|
@@ -600,6 +606,15 @@ module NandoSchemaDiff
 
   def self.print_mismatching (message)
     puts "? #{message}".yellow.bold
+  end
+
+  # functions to build certain SQL commands
+  def self.build_add_column_line (column_key, column_info)
+    data_type = column_info[:column_datatype]
+    has_default = column_info[:column_has_default] == 't' ? true : false
+    default_string = has_default ? "DEFAULT #{column_info[:column_default]}" : ''
+    nullable = column_info[:column_not_null] == 't' ? 'NOT NULL' : ''
+    return "ADD COLUMN '#{column_key}' #{data_type} #{nullable} #{default_string}".gsub(/\s+/, ' ').strip # build string, clear extra spaces
   end
 
 end
