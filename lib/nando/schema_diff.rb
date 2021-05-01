@@ -224,7 +224,7 @@ module NandoSchemaDiff
         :columns => {
           :missing => {},
           :extra => [],
-          :mismatching => [] # TODO: replace with hash
+          :mismatching => {}
         },
         :indexes => {
           :missing => [],
@@ -310,7 +310,7 @@ module NandoSchemaDiff
 
         if left_schema[table_key][:columns][column_key] != right_schema[table_key][:columns][column_key]
           setup_table_info(left_info, table_key)
-          left_info[:tables][:mismatching][table_key][:columns][:mismatching] << column_key # TODO: add more info, not just a key
+          left_info[:tables][:mismatching][table_key][:columns][:mismatching][column_key] = merge_left_right_hashes(left_schema[table_key][:columns][column_key], right_schema[table_key][:columns][column_key])
         end
       end
     end
@@ -451,42 +451,6 @@ module NandoSchemaDiff
     end
   end
 
-
-  def self.schema_correction_suggestion (source_schema, target_schema, drop_tables, create_tables, mismatching_tables)
-    puts "\nSuggestion to turn '#{source_schema}' into '#{target_schema}'".magenta.bold
-
-    # TODO: will remove colors in the end, just here to list commands that are "ready"
-
-    drop_tables.each do |command|
-      puts "\n#{command}".green.bold
-    end
-
-    create_tables.each do |command|
-      puts "\n#{command}"
-    end
-
-    mismatching_tables.each do |table_key, table_value|
-      # print all isolated commands
-      table_value[:isolated_commands].each do |command|
-        puts "#{command};".green.bold
-      end
-
-      # print all alter table commands necessary
-      if table_value[:alter_tables].length > 0
-        puts "ALTER TABLE #{source_schema}.#{table_key}".green.bold
-        table_value[:alter_tables].each_with_index do |command, index|
-          terminator = (index == table_value[:alter_tables].length - 1) ? ';' : ',';
-          puts "  #{command}#{terminator}".green.bold
-        end
-      end
-
-      # print mismatching commands
-      table_value[:mismatching].each do |command|
-        puts "#{command};".yellow.bold
-      end
-    end
-  end
-
   def self.print_diff_info (info, source_schema, target_schema)
     puts "\nComparing '#{source_schema}' to '#{target_schema}'".magenta.bold
 
@@ -525,9 +489,9 @@ module NandoSchemaDiff
         mismatching_tables[table_key][:alter_tables] << build_add_column_line(column_key, column_value)
       end
 
-      table_value[:columns][:mismatching].each do |column|
-        print_mismatching "  Column '#{column}'"
-        mismatching_tables[table_key][:mismatching] << "TODO: MISMATCHING COLUMN '#{column}'"
+      table_value[:columns][:mismatching].each do |column_key, column_value|
+        print_mismatching "  Column '#{column_key}'"
+        mismatching_tables[table_key][:mismatching] << "TODO: MISMATCHING COLUMN '#{column_key}'"
       end
 
       # triggers
@@ -596,6 +560,41 @@ module NandoSchemaDiff
     schema_correction_suggestion(source_schema, target_schema, drop_tables, create_tables, mismatching_tables)
   end
 
+  def self.schema_correction_suggestion (source_schema, target_schema, drop_tables, create_tables, mismatching_tables)
+    puts "\nSuggestion to turn '#{source_schema}' into '#{target_schema}'".magenta.bold
+
+    # TODO: will remove colors in the end, just here to list commands that are "ready"
+
+    drop_tables.each do |command|
+      puts "\n#{command}".green.bold
+    end
+
+    create_tables.each do |command|
+      puts "\n#{command}"
+    end
+
+    mismatching_tables.each do |table_key, table_value|
+      # print all isolated commands
+      table_value[:isolated_commands].each do |command|
+        puts "#{command};".green.bold
+      end
+
+      # print all alter table commands necessary
+      if table_value[:alter_tables].length > 0
+        puts "ALTER TABLE #{source_schema}.#{table_key}".green.bold
+        table_value[:alter_tables].each_with_index do |command, index|
+          terminator = (index == table_value[:alter_tables].length - 1) ? ';' : ',';
+          puts "  #{command}#{terminator}".green.bold
+        end
+      end
+
+      # print mismatching commands
+      table_value[:mismatching].each do |command|
+        puts "#{command};".yellow.bold
+      end
+    end
+  end
+
   def self.print_extra (message)
     puts "+ #{message}".green.bold
   end
@@ -606,6 +605,23 @@ module NandoSchemaDiff
 
   def self.print_mismatching (message)
     puts "? #{message}".yellow.bold
+  end
+
+  # takes 2 hashes and returns a object with both of the keys remapped
+  def self.merge_left_right_hashes (left_hash, right_hash)
+    left_rehashed = remap_hash(left_hash, "left_")
+    right_rehashed = remap_hash(right_hash, "right_")
+    merged_hash = {}.merge(left_rehashed).merge(right_rehashed)
+    return merged_hash
+  end
+
+  def self.remap_hash (hash, prefix)
+    return_hash = {}
+    hash.each do |key, value|
+      new_symbol = prefix + key.to_s
+      return_hash[new_symbol.to_sym] = value
+    end
+    return return_hash
   end
 
   # functions to build certain SQL commands
