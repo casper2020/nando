@@ -1,6 +1,7 @@
 module NandoSchemaDiff
 
   SCHEMA_PLACEHOLDER = '___SCHEMANAME___'
+  SCHEMA_VARIABLE = '#{schema_name}' # TODO: leave this as an env variable?
   TABLE_TYPE = {
     'r' => :tables,
     'v' => :views
@@ -227,19 +228,19 @@ module NandoSchemaDiff
           :mismatching => {}
         },
         :indexes => {
-          :missing => [],
+          :missing => {},
           :extra => [],
-          :mismatching => [] # TODO: replace with hash
+          :mismatching => {}
         },
         :triggers => {
-          :missing => [],
+          :missing => {},
           :extra => [],
-          :mismatching => [] # TODO: replace with hash
+          :mismatching => {}
         },
         :constraints => {
-          :missing => [],
+          :missing => {},
           :extra => [],
-          :mismatching => [] # TODO: replace with hash
+          :mismatching => {}
         }
       }
     end
@@ -333,7 +334,9 @@ module NandoSchemaDiff
 
       if keys_diff = right_schema[table_key][:triggers].keys - left_schema[table_key][:triggers].keys
         setup_table_info(left_info, table_key)
-        left_info[:tables][:mismatching][table_key][:triggers][:missing] += keys_diff
+        keys_diff.each do |trigger_key|
+          left_info[:tables][:mismatching][table_key][:triggers][:missing][trigger_key] = right_schema[table_key][:triggers][trigger_key]
+        end
       end
     end
   end
@@ -355,7 +358,7 @@ module NandoSchemaDiff
 
         if left_schema[table_key][:triggers][trigger_key] != right_schema[table_key][:triggers][trigger_key]
           setup_table_info(left_info, table_key)
-          left_info[:tables][:mismatching][table_key][:triggers][:mismatching] << trigger_key # TODO: add more info, not just a key
+          left_info[:tables][:mismatching][table_key][:triggers][:mismatching][trigger_key] = merge_left_right_hashes(left_schema[table_key][:triggers][trigger_key], right_schema[table_key][:triggers][trigger_key])
         end
       end
     end
@@ -378,7 +381,9 @@ module NandoSchemaDiff
 
       if keys_diff = right_schema[table_key][:constraints].keys - left_schema[table_key][:constraints].keys
         setup_table_info(left_info, table_key)
-        left_info[:tables][:mismatching][table_key][:constraints][:missing] += keys_diff
+        keys_diff.each do |constraint_key|
+          left_info[:tables][:mismatching][table_key][:constraints][:missing][constraint_key] = right_schema[table_key][:constraints][constraint_key]
+        end
       end
     end
   end
@@ -400,7 +405,7 @@ module NandoSchemaDiff
 
         if left_schema[table_key][:constraints][constraint_key] != right_schema[table_key][:constraints][constraint_key]
           setup_table_info(left_info, table_key)
-          left_info[:tables][:mismatching][table_key][:constraints][:mismatching] << constraint_key # TODO: add more info, not just a key
+          left_info[:tables][:mismatching][table_key][:constraints][:mismatching][constraint_key] = merge_left_right_hashes(left_schema[table_key][:constraints][constraint_key], right_schema[table_key][:constraints][constraint_key])
         end
       end
     end
@@ -423,7 +428,9 @@ module NandoSchemaDiff
 
       if keys_diff = right_schema[table_key][:indexes].keys - left_schema[table_key][:indexes].keys
         setup_table_info(left_info, table_key)
-        left_info[:tables][:mismatching][table_key][:indexes][:missing] += keys_diff
+        keys_diff.each do |index_key|
+          left_info[:tables][:mismatching][table_key][:indexes][:missing][index_key] = right_schema[table_key][:indexes][index_key]
+        end
       end
     end
   end
@@ -445,7 +452,7 @@ module NandoSchemaDiff
 
         if left_schema[table_key][:indexes][index_key] != right_schema[table_key][:indexes][index_key]
           setup_table_info(left_info, table_key)
-          left_info[:tables][:mismatching][table_key][:indexes][:mismatching] << index_key # TODO: add more info, not just a key
+          left_info[:tables][:mismatching][table_key][:indexes][:mismatching][index_key] = merge_left_right_hashes(left_schema[table_key][:indexes][index_key], right_schema[table_key][:indexes][index_key])
         end
       end
     end
@@ -500,14 +507,14 @@ module NandoSchemaDiff
         mismatching_tables[table_key][:isolated_commands] << "DROP TRIGGER IF EXISTS #{trigger} ON #{source_schema}.#{table_key}"
       end
 
-      table_value[:triggers][:missing].each do |trigger|
-        print_missing "  Trigger '#{trigger}'"
-        mismatching_tables[table_key][:warnings] << "TODO: MISSING TRIGGER '#{trigger}'"
+      table_value[:triggers][:missing].each do |trigger_key, trigger_value|
+        print_missing "  Trigger '#{trigger_key}'"
+        mismatching_tables[table_key][:isolated_commands] << build_add_trigger_line(trigger_key, trigger_value)
       end
 
-      table_value[:triggers][:mismatching].each do |trigger|
-        print_mismatching "  Trigger '#{trigger}'"
-        mismatching_tables[table_key][:warnings] << "TODO: MISMATCHING TRIGGER '#{trigger}'"
+      table_value[:triggers][:mismatching].each do |trigger_key, trigger_value|
+        print_mismatching "  Trigger '#{trigger_key}'"
+        mismatching_tables[table_key][:warnings] += build_mismatching_trigger_lines(trigger_key, trigger_value)
       end
 
       # constraints
@@ -516,14 +523,14 @@ module NandoSchemaDiff
         mismatching_tables[table_key][:alter_tables] << "DROP CONSTRAINT IF EXISTS '#{constraint}'"
       end
 
-      table_value[:constraints][:missing].each do |constraint|
-        print_missing "  Constraint '#{constraint}'"
-        mismatching_tables[table_key][:warnings] << "TODO: MISSING CONSTRAINT '#{constraint}'"
+      table_value[:constraints][:missing].each do |constraint_key, constraint_value|
+        print_missing "  Constraint '#{constraint_key}'"
+        mismatching_tables[table_key][:alter_tables] << build_add_constraint_line(constraint_key, constraint_value)
       end
 
-      table_value[:constraints][:mismatching].each do |constraint|
-        print_mismatching "  Constraint '#{constraint}'"
-        mismatching_tables[table_key][:warnings] << "TODO: MISMATCHING CONSTRAINT '#{constraint}'"
+      table_value[:constraints][:mismatching].each do |constraint_key, constraint_value|
+        print_mismatching "  Constraint '#{constraint_key}'"
+        mismatching_tables[table_key][:warnings] += build_mismatching_constraint_lines(constraint_key, constraint_value)
       end
 
       # indexes
@@ -532,14 +539,14 @@ module NandoSchemaDiff
         mismatching_tables[table_key][:isolated_commands] << "DROP INDEX IF EXISTS #{source_schema}.#{index}"
       end
 
-      table_value[:indexes][:missing].each do |index|
-        print_missing "  Index '#{index}'"
-        mismatching_tables[table_key][:warnings] << "TODO: MISSING INDEX '#{index}'"
+      table_value[:indexes][:missing].each do |index_key, index_value|
+        print_missing "  Index '#{index_key}'"
+        mismatching_tables[table_key][:isolated_commands] << build_add_index_line(index_key, index_value)
       end
 
-      table_value[:indexes][:mismatching].each do |index|
-        print_mismatching "  Index '#{index}'"
-        mismatching_tables[table_key][:warnings] << "TODO: MISMATCHING INDEX '#{index}'"
+      table_value[:indexes][:mismatching].each do |index_key, index_value|
+        print_mismatching "  Index '#{index_key}'"
+        mismatching_tables[table_key][:warnings] += build_mismatching_index_lines(index_key, index_value)
       end
 
     end
@@ -649,6 +656,48 @@ module NandoSchemaDiff
       left_nullable = column_info[:left_column_not_null] == 't' ? 'NOT NULLABLE' : 'NULLABLE'
       right_nullable = column_info[:right_column_not_null] == 't' ? 'NOT NULLABLE' : 'NULLABLE'
       warnings << "Column '#{column_key}' is '#{left_nullable}' on current schema, but '#{right_nullable}' in the target schema"
+    end
+    return warnings
+  end
+
+  def self.build_add_trigger_line (trigger_key, trigger_info)
+    trigger_def = trigger_info[:trigger_definition].gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE)
+    return trigger_def
+  end
+
+  def self.build_mismatching_trigger_lines (trigger_key, trigger_info)
+    warnings = []
+    if trigger_info[:left_trigger_definition] != trigger_info[:right_trigger_definition]
+      warnings << "Trigger '#{trigger_key}' definition is different between schemas"
+    end
+    return warnings
+  end
+
+  def self.build_add_constraint_line (constraint_key, constraint_info)
+    constraint_def = constraint_info[:constraint_definition].gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE)
+    return "ADD CONSTRAINT '#{constraint_key}' #{constraint_def}"
+  end
+
+  def self.build_mismatching_constraint_lines (constraint_key, constraint_info)
+    warnings = []
+    if constraint_info[:left_constraint_definition] != constraint_info[:right_constraint_definition]
+      warnings << "Constraint '#{constraint_key}' definition is different between schemas"
+    end
+    return warnings
+  end
+
+  def self.build_add_index_line(index_key, index_info)
+    index_def = index_info[:index_definition].gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE)
+    return index_def
+  end
+
+  def self.build_mismatching_index_lines(index_key, index_info)
+    warnings = []
+    if index_info[:left_index_definition] != index_info[:right_index_definition]
+      warnings << "Index '#{index_key}' definition is different between schemas"
+    end
+    if index_info[:left_index_columns] != index_info[:right_index_columns]
+      warnings << "Index '#{index_key}' affects different columns between schemas"
     end
     return warnings
   end
