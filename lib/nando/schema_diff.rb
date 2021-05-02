@@ -475,7 +475,7 @@ module NandoSchemaDiff
       mismatching_tables[table_key] = {
         :isolated_commands => [],
         :alter_tables => [],
-        :mismatching => []
+        :warnings => []
       }
 
       # columns
@@ -491,7 +491,7 @@ module NandoSchemaDiff
 
       table_value[:columns][:mismatching].each do |column_key, column_value|
         print_mismatching "  Column '#{column_key}'"
-        mismatching_tables[table_key][:mismatching] << "TODO: MISMATCHING COLUMN '#{column_key}'"
+        mismatching_tables[table_key][:warnings] += build_mismatching_column_lines(column_key, column_value)
       end
 
       # triggers
@@ -502,12 +502,12 @@ module NandoSchemaDiff
 
       table_value[:triggers][:missing].each do |trigger|
         print_missing "  Trigger '#{trigger}'"
-        mismatching_tables[table_key][:mismatching] << "TODO: MISSING TRIGGER '#{trigger}'"
+        mismatching_tables[table_key][:warnings] << "TODO: MISSING TRIGGER '#{trigger}'"
       end
 
       table_value[:triggers][:mismatching].each do |trigger|
         print_mismatching "  Trigger '#{trigger}'"
-        mismatching_tables[table_key][:mismatching] << "TODO: MISMATCHING TRIGGER '#{trigger}'"
+        mismatching_tables[table_key][:warnings] << "TODO: MISMATCHING TRIGGER '#{trigger}'"
       end
 
       # constraints
@@ -518,12 +518,12 @@ module NandoSchemaDiff
 
       table_value[:constraints][:missing].each do |constraint|
         print_missing "  Constraint '#{constraint}'"
-        mismatching_tables[table_key][:mismatching] << "TODO: MISSING CONSTRAINT '#{constraint}'"
+        mismatching_tables[table_key][:warnings] << "TODO: MISSING CONSTRAINT '#{constraint}'"
       end
 
       table_value[:constraints][:mismatching].each do |constraint|
         print_mismatching "  Constraint '#{constraint}'"
-        mismatching_tables[table_key][:mismatching] << "TODO: MISMATCHING CONSTRAINT '#{constraint}'"
+        mismatching_tables[table_key][:warnings] << "TODO: MISMATCHING CONSTRAINT '#{constraint}'"
       end
 
       # indexes
@@ -534,12 +534,12 @@ module NandoSchemaDiff
 
       table_value[:indexes][:missing].each do |index|
         print_missing "  Index '#{index}'"
-        mismatching_tables[table_key][:mismatching] << "TODO: MISSING INDEX '#{index}'"
+        mismatching_tables[table_key][:warnings] << "TODO: MISSING INDEX '#{index}'"
       end
 
       table_value[:indexes][:mismatching].each do |index|
         print_mismatching "  Index '#{index}'"
-        mismatching_tables[table_key][:mismatching] << "TODO: MISMATCHING INDEX '#{index}'"
+        mismatching_tables[table_key][:warnings] << "TODO: MISMATCHING INDEX '#{index}'"
       end
 
     end
@@ -588,9 +588,9 @@ module NandoSchemaDiff
         end
       end
 
-      # print mismatching commands
-      table_value[:mismatching].each do |command|
-        puts "#{command};".yellow.bold
+      # print warnings
+      table_value[:warnings].each do |command|
+        puts "  WARNING => #{command}".yellow.bold
       end
     end
   end
@@ -609,8 +609,8 @@ module NandoSchemaDiff
 
   # takes 2 hashes and returns a object with both of the keys remapped
   def self.merge_left_right_hashes (left_hash, right_hash)
-    left_rehashed = remap_hash(left_hash, "left_")
-    right_rehashed = remap_hash(right_hash, "right_")
+    left_rehashed = remap_hash(left_hash, 'left_')
+    right_rehashed = remap_hash(right_hash, 'right_')
     merged_hash = {}.merge(left_rehashed).merge(right_rehashed)
     return merged_hash
   end
@@ -631,6 +631,26 @@ module NandoSchemaDiff
     default_string = has_default ? "DEFAULT #{column_info[:column_default]}" : ''
     nullable = column_info[:column_not_null] == 't' ? 'NOT NULL' : ''
     return "ADD COLUMN '#{column_key}' #{data_type} #{nullable} #{default_string}".gsub(/\s+/, ' ').strip # build string, clear extra spaces
+  end
+
+  def self.build_mismatching_column_lines (column_key, column_info)
+    warnings = []
+
+    if column_info[:left_column_num] != column_info[:right_column_num]
+      warnings << "Column '#{column_key}' is on position '#{column_info[:left_column_num]}' on current schema, but on position '#{column_info[:right_column_num]}' in the target schema"
+    end
+    if column_info[:left_column_default] != column_info[:right_column_default]
+      warnings << "Column '#{column_key}' has default value '#{column_info[:left_column_default].to_s}' on current schema, but default value '#{column_info[:right_column_default].to_s}' in the target schema"
+    end
+    if column_info[:left_column_datatype] != column_info[:right_column_datatype]
+      warnings << "Column '#{column_key}' is of type '#{column_info[:left_column_datatype].to_s}' on current schema, but of type '#{column_info[:right_column_datatype].to_s}' in the target schema"
+    end
+    if column_info[:left_column_not_null] != column_info[:right_column_not_null]
+      left_nullable = column_info[:left_column_not_null] == 't' ? 'NOT NULLABLE' : 'NULLABLE'
+      right_nullable = column_info[:right_column_not_null] == 't' ? 'NOT NULLABLE' : 'NULLABLE'
+      warnings << "Column '#{column_key}' is '#{left_nullable}' on current schema, but '#{right_nullable}' in the target schema"
+    end
+    return warnings
   end
 
 end
