@@ -62,8 +62,7 @@ module NandoSchemaDiff
     check_mismatching_indexes(target[:tables], source[:tables], target_info, source_info)
 
 
-    # TODO: what to do about views, types, etc
-
+    # TODO: convert this to valid up/down sections
     print_diff_info(source_info, source_schema, target_schema)
     print_diff_info(target_info, target_schema, source_schema)
     puts ""
@@ -75,8 +74,6 @@ module NandoSchemaDiff
       :views => {}
     }
     db_connection = NandoMigrator.get_database_connection()
-
-    # TODO: reduce these SELECT * to specific columns
 
     # get all tables/views in the schema
     results = db_connection.exec("
@@ -259,7 +256,6 @@ module NandoSchemaDiff
   end
 
   # views comparison
-  # TODO: might merge with above, if they stay similiar
   def self.check_different_views (left_schema, right_schema, left_info, right_info)
     if keys_diff = left_schema.keys - right_schema.keys
       left_info[:views][:extra] += keys_diff
@@ -472,7 +468,7 @@ module NandoSchemaDiff
 
     info[:tables][:missing].each do |table|
       print_missing "Table '#{table}'"
-      create_tables << "TODO: MISSING TABLE"
+      create_tables << "Table '#{table}' does not exist in #{source_schema}".yellow.bold
     end
 
     # iterate over all tables with info
@@ -570,8 +566,6 @@ module NandoSchemaDiff
   def self.schema_correction_suggestion (source_schema, target_schema, drop_tables, create_tables, mismatching_tables)
     puts "\nSuggestion to turn '#{source_schema}' into '#{target_schema}'".magenta.bold
 
-    # TODO: will remove colors in the end, just here to list commands that are "ready"
-
     drop_tables.each do |command|
       puts "\n#{command}".green.bold
     end
@@ -581,6 +575,7 @@ module NandoSchemaDiff
     end
 
     mismatching_tables.each do |table_key, table_value|
+      puts ''
       # print all isolated commands
       table_value[:isolated_commands].each do |command|
         puts "#{command};".green.bold
