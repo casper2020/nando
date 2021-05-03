@@ -457,18 +457,18 @@ module NandoSchemaDiff
   def self.print_diff_info (info, source_schema, target_schema)
     puts "\nComparing '#{source_schema}' to '#{target_schema}'".magenta.bold
 
-    drop_tables = []
-    create_tables = []
+    extra_tables = {}
+    missing_tables = {}
     mismatching_tables = {}
 
     info[:tables][:extra].each do |table|
       print_extra "Table '#{table}'"
-      drop_tables << "DROP TABLE IF EXISTS #{source_schema}.#{table};"
+      extra_tables[table] = "DROP TABLE IF EXISTS #{source_schema}.#{table};"
     end
 
     info[:tables][:missing].each do |table|
       print_missing "Table '#{table}'"
-      create_tables << "Table '#{table}' does not exist in #{source_schema}".yellow.bold
+      missing_tables[table] = "Table '#{table}' does not exist in #{source_schema}"
     end
 
     # iterate over all tables with info
@@ -560,22 +560,24 @@ module NandoSchemaDiff
     end
 
     # suggestions
-    schema_correction_suggestion(source_schema, target_schema, drop_tables, create_tables, mismatching_tables)
+    schema_correction_suggestion(source_schema, target_schema, extra_tables, missing_tables, mismatching_tables)
   end
 
-  def self.schema_correction_suggestion (source_schema, target_schema, drop_tables, create_tables, mismatching_tables)
+  def self.schema_correction_suggestion (source_schema, target_schema, extra_tables, missing_tables, mismatching_tables)
     puts "\nSuggestion to turn '#{source_schema}' into '#{target_schema}'".magenta.bold
 
-    drop_tables.each do |command|
-      puts "\n#{command}".green.bold
+    extra_tables.each do |table_key, command|
+      puts "\n-- #{table_key}".white.bold
+      puts "#{command}".green.bold
     end
 
-    create_tables.each do |command|
-      puts "\n#{command}"
+    missing_tables.each do |table_key, command|
+      puts "\n-- #{table_key}".white.bold
+      _warn "#{command}"
     end
 
     mismatching_tables.each do |table_key, table_value|
-      puts ''
+      puts "\n-- #{table_key}".white.bold
       # print all isolated commands
       table_value[:isolated_commands].each do |command|
         puts "#{command};".green.bold
@@ -592,7 +594,7 @@ module NandoSchemaDiff
 
       # print warnings
       table_value[:warnings].each do |command|
-        puts "  WARNING => #{command}".yellow.bold
+        _warn "#{command}"
       end
     end
   end
