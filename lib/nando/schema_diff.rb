@@ -62,9 +62,18 @@ module NandoSchemaDiff
     check_mismatching_indexes(target[:tables], source[:tables], target_info, source_info)
 
 
-    # TODO: convert this to valid up/down sections
-    print_diff_info(source_info, source_schema, target_schema)
-    print_diff_info(target_info, target_schema, source_schema)
+    source_extra_tables, source_missing_tables, source_mismatching_tables = print_diff_info(source_info, source_schema, target_schema)
+    target_extra_tables, target_missing_tables, target_mismatching_tables = print_diff_info(target_info, source_schema, target_schema)
+
+    # TODO: ask user if he wants the diff
+
+    # suggestions
+    puts "\n\n===========================//===========================\n".magenta.bold
+    puts "\nSuggestion for ".magenta.bold + "'up'".white.bold + ":".magenta.bold
+    schema_correction_suggestion(source_schema, target_schema, source_extra_tables, source_missing_tables, source_mismatching_tables)
+
+    puts "\nSuggestion for ".magenta.bold + "'down'".white.bold + ":".magenta.bold
+    schema_correction_suggestion(source_schema, target_schema, target_extra_tables, target_missing_tables, target_mismatching_tables)
     puts ""
   end
 
@@ -277,6 +286,9 @@ module NandoSchemaDiff
       end
 
       if keys_diff = left_schema[table_key][:columns].keys - right_schema[table_key][:columns].keys
+        # if table_key == 'suppliers'
+        #   debugger # TODO: replace line above with !(keys_diff = (...)).empty?
+        # end
         setup_table_info(left_info, table_key)
         left_info[:tables][:mismatching][table_key][:columns][:extra] += keys_diff
       end
@@ -559,12 +571,10 @@ module NandoSchemaDiff
       print_mismatching "View '#{view}'"
     end
 
-    # suggestions
-    schema_correction_suggestion(source_schema, target_schema, extra_tables, missing_tables, mismatching_tables)
+    return extra_tables, missing_tables, mismatching_tables
   end
 
   def self.schema_correction_suggestion (source_schema, target_schema, extra_tables, missing_tables, mismatching_tables)
-    puts "\nSuggestion to turn '#{source_schema}' into '#{target_schema}'".magenta.bold
 
     extra_tables.each do |table_key, command|
       puts "\n-- #{table_key}".white.bold
@@ -634,7 +644,7 @@ module NandoSchemaDiff
     has_default = column_info[:column_has_default] == 't' ? true : false
     default_string = has_default ? "DEFAULT #{column_info[:column_default]}" : ''
     nullable = column_info[:column_not_null] == 't' ? 'NOT NULL' : ''
-    return "ADD COLUMN '#{column_key}' #{data_type} #{nullable} #{default_string}".gsub(/\s+/, ' ').strip # build string, clear extra spaces
+    return "ADD COLUMN #{column_key} #{data_type} #{nullable} #{default_string}".gsub(/\s+/, ' ').strip # build string, clear extra spaces
   end
 
   def self.build_mismatching_column_lines (column_key, column_info)
@@ -672,7 +682,7 @@ module NandoSchemaDiff
 
   def self.build_add_constraint_line (constraint_key, constraint_info)
     constraint_def = constraint_info[:constraint_definition].gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE)
-    return "ADD CONSTRAINT '#{constraint_key}' #{constraint_def}"
+    return "ADD CONSTRAINT \"#{constraint_key}\" #{constraint_def}"
   end
 
   def self.build_mismatching_constraint_lines (constraint_key, constraint_info)
