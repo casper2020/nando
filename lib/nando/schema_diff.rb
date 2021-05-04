@@ -255,22 +255,22 @@ module NandoSchemaDiff
 
   # table comparison
   def self.check_different_tables (left_schema, right_schema, left_info, right_info)
-    if keys_diff = left_schema.keys - right_schema.keys
+    if !(keys_diff = left_schema.keys - right_schema.keys).empty?
       left_info[:tables][:extra] += keys_diff
     end
 
-    if keys_diff = right_schema.keys - left_schema.keys
+    if !(keys_diff = right_schema.keys - left_schema.keys).empty?
       left_info[:tables][:missing] += keys_diff
     end
   end
 
   # views comparison
   def self.check_different_views (left_schema, right_schema, left_info, right_info)
-    if keys_diff = left_schema.keys - right_schema.keys
+    if !(keys_diff = left_schema.keys - right_schema.keys).empty?
       left_info[:views][:extra] += keys_diff
     end
 
-    if keys_diff = right_schema.keys - left_schema.keys
+    if !(keys_diff = right_schema.keys - left_schema.keys).empty?
       left_info[:views][:missing] += keys_diff
     end
   end
@@ -285,15 +285,12 @@ module NandoSchemaDiff
         next
       end
 
-      if keys_diff = left_schema[table_key][:columns].keys - right_schema[table_key][:columns].keys
-        # if table_key == 'suppliers'
-        #   debugger # TODO: replace line above with !(keys_diff = (...)).empty?
-        # end
+      if !(keys_diff = left_schema[table_key][:columns].keys - right_schema[table_key][:columns].keys).empty?
         setup_table_info(left_info, table_key)
         left_info[:tables][:mismatching][table_key][:columns][:extra] += keys_diff
       end
 
-      if keys_diff = right_schema[table_key][:columns].keys - left_schema[table_key][:columns].keys
+      if !(keys_diff = right_schema[table_key][:columns].keys - left_schema[table_key][:columns].keys).empty?
         setup_table_info(left_info, table_key)
         keys_diff.each do |column_key|
           left_info[:tables][:mismatching][table_key][:columns][:missing][column_key] = right_schema[table_key][:columns][column_key]
@@ -312,7 +309,7 @@ module NandoSchemaDiff
 
       table_value[:columns].each do |column_key, column_value|
         # ignore columns that only appear in one of the tables
-        if left_info[:tables][:mismatching][table_key][:columns][:missing].include?(column_key) || right_info[:tables][:mismatching][table_key][:columns][:missing].include?(column_key)
+        if (!left_info[:tables][:mismatching][table_key].nil? && !right_info[:tables][:mismatching][table_key].nil?) && (left_info[:tables][:mismatching][table_key][:columns][:missing].include?(column_key) || right_info[:tables][:mismatching][table_key][:columns][:missing].include?(column_key))
           _debug "Skipping column: #{column_key}"
           next
         end
@@ -335,12 +332,12 @@ module NandoSchemaDiff
         next
       end
 
-      if keys_diff = left_schema[table_key][:triggers].keys - right_schema[table_key][:triggers].keys
+      if !(keys_diff = left_schema[table_key][:triggers].keys - right_schema[table_key][:triggers].keys).empty?
         setup_table_info(left_info, table_key)
         left_info[:tables][:mismatching][table_key][:triggers][:extra] += keys_diff
       end
 
-      if keys_diff = right_schema[table_key][:triggers].keys - left_schema[table_key][:triggers].keys
+      if !(keys_diff = right_schema[table_key][:triggers].keys - left_schema[table_key][:triggers].keys).empty?
         setup_table_info(left_info, table_key)
         keys_diff.each do |trigger_key|
           left_info[:tables][:mismatching][table_key][:triggers][:missing][trigger_key] = right_schema[table_key][:triggers][trigger_key]
@@ -359,7 +356,7 @@ module NandoSchemaDiff
 
       table_value[:triggers].each do |trigger_key, trigger_value|
         # ignore triggers that only appear in one of the tables
-        if left_info[:tables][:mismatching][table_key][:triggers][:missing].include?(trigger_key) || right_info[:tables][:mismatching][table_key][:triggers][:missing].include?(trigger_key)
+        if (!left_info[:tables][:mismatching][table_key].nil? && !right_info[:tables][:mismatching][table_key].nil?) && (left_info[:tables][:mismatching][table_key][:triggers][:missing].include?(trigger_key) || right_info[:tables][:mismatching][table_key][:triggers][:missing].include?(trigger_key))
           _debug "Skipping trigger: #{trigger_key}"
           next
         end
@@ -382,12 +379,12 @@ module NandoSchemaDiff
         next
       end
 
-      if keys_diff = left_schema[table_key][:constraints].keys - right_schema[table_key][:constraints].keys
+      if !(keys_diff = left_schema[table_key][:constraints].keys - right_schema[table_key][:constraints].keys).empty?
         setup_table_info(left_info, table_key)
         left_info[:tables][:mismatching][table_key][:constraints][:extra] += keys_diff
       end
 
-      if keys_diff = right_schema[table_key][:constraints].keys - left_schema[table_key][:constraints].keys
+      if !(keys_diff = right_schema[table_key][:constraints].keys - left_schema[table_key][:constraints].keys).empty?
         setup_table_info(left_info, table_key)
         keys_diff.each do |constraint_key|
           left_info[:tables][:mismatching][table_key][:constraints][:missing][constraint_key] = right_schema[table_key][:constraints][constraint_key]
@@ -406,7 +403,7 @@ module NandoSchemaDiff
 
       table_value[:constraints].each do |constraint_key, constraint_value|
         # ignore constraints that only appear in one of the tables
-        if left_info[:tables][:mismatching][table_key][:constraints][:missing].include?(constraint_key) || right_info[:tables][:mismatching][table_key][:constraints][:missing].include?(constraint_key)
+        if (!left_info[:tables][:mismatching][table_key].nil? && !right_info[:tables][:mismatching][table_key].nil?) && (left_info[:tables][:mismatching][table_key][:constraints][:missing].include?(constraint_key) || right_info[:tables][:mismatching][table_key][:constraints][:missing].include?(constraint_key))
           _debug "Skipping constraint: #{constraint_key}"
           next
         end
@@ -429,12 +426,12 @@ module NandoSchemaDiff
         next
       end
 
-      if keys_diff = left_schema[table_key][:indexes].keys - right_schema[table_key][:indexes].keys
+      if !(keys_diff = left_schema[table_key][:indexes].keys - right_schema[table_key][:indexes].keys).empty?
         setup_table_info(left_info, table_key)
         left_info[:tables][:mismatching][table_key][:indexes][:extra] += keys_diff
       end
 
-      if keys_diff = right_schema[table_key][:indexes].keys - left_schema[table_key][:indexes].keys
+      if !(keys_diff = right_schema[table_key][:indexes].keys - left_schema[table_key][:indexes].keys).empty?
         setup_table_info(left_info, table_key)
         keys_diff.each do |index_key|
           left_info[:tables][:mismatching][table_key][:indexes][:missing][index_key] = right_schema[table_key][:indexes][index_key]
@@ -453,7 +450,7 @@ module NandoSchemaDiff
 
       table_value[:indexes].each do |index_key, index_value|
         # ignore indexes that only appear in one of the tables
-        if left_info[:tables][:mismatching][table_key][:indexes][:missing].include?(index_key) || right_info[:tables][:mismatching][table_key][:indexes][:missing].include?(index_key)
+        if (!left_info[:tables][:mismatching][table_key].nil? && !right_info[:tables][:mismatching][table_key].nil?) && (left_info[:tables][:mismatching][table_key][:indexes][:missing].include?(index_key) || right_info[:tables][:mismatching][table_key][:indexes][:missing].include?(index_key))
           _debug "Skipping index: #{index_key}"
           next
         end
@@ -528,7 +525,7 @@ module NandoSchemaDiff
       # constraints
       table_value[:constraints][:extra].each do |constraint|
         print_extra "  Constraint '#{constraint}'"
-        mismatching_tables[table_key][:alter_tables] << "DROP CONSTRAINT IF EXISTS '#{constraint}'"
+        mismatching_tables[table_key][:alter_tables] << "DROP CONSTRAINT IF EXISTS \"#{constraint}\""
       end
 
       table_value[:constraints][:missing].each do |constraint_key, constraint_value|
