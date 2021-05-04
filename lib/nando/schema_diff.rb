@@ -62,18 +62,18 @@ module NandoSchemaDiff
     check_mismatching_indexes(target[:tables], source[:tables], target_info, source_info)
 
 
-    source_extra_tables, source_missing_tables, source_mismatching_tables = print_diff_info(source_info, source_schema, target_schema)
-    target_extra_tables, target_missing_tables, target_mismatching_tables = print_diff_info(target_info, source_schema, target_schema)
+    source_suggestions = print_diff_info(source_info, source_schema, target_schema)
+    target_suggestions = print_diff_info(target_info, source_schema, target_schema)
 
     # TODO: ask user if he wants the diff
 
     # suggestions
     puts "\n\n===========================//===========================\n".magenta.bold
     puts "\nSuggestion for ".magenta.bold + "'up'".white.bold + ":".magenta.bold
-    schema_correction_suggestion(source_schema, target_schema, source_extra_tables, source_missing_tables, source_mismatching_tables)
+    print_schema_correction_suggestions(source_schema, target_schema, source_suggestions)
 
     puts "\nSuggestion for ".magenta.bold + "'down'".white.bold + ":".magenta.bold
-    schema_correction_suggestion(source_schema, target_schema, target_extra_tables, target_missing_tables, target_mismatching_tables)
+    print_schema_correction_suggestions(source_schema, target_schema, target_suggestions)
     puts ""
   end
 
@@ -469,6 +469,7 @@ module NandoSchemaDiff
     extra_tables = {}
     missing_tables = {}
     mismatching_tables = {}
+    mismatching_views = {}
 
     info[:tables][:extra].each do |table|
       print_extra "Table '#{table}'"
@@ -556,34 +557,44 @@ module NandoSchemaDiff
 
     end
 
-    info[:views][:extra].each do |view|
-      print_extra "View '#{view}'"
+    info[:views][:extra].each do |view_key|
+      print_extra "View '#{view_key}'"
+      mismatching_views[view_key] = "View '#{view_key}' exists in '#{source_schema}' but not in the target schema. Might need to drop it"
     end
 
-    info[:views][:missing].each do |view|
-      print_missing "View '#{view}'"
+    info[:views][:missing].each do |view_key|
+      print_missing "View '#{view_key}'"
+      mismatching_views[view_key] = "View '#{view_key}' does not exist in '#{source_schema}'. Might need to recreate it"
     end
 
-    info[:views][:mismatching].each do |view|
-      print_mismatching "View '#{view}'"
+    info[:views][:mismatching].each do |view_key|
+      print_mismatching "View '#{view_key}'"
+      mismatching_views[view_key] = "View '#{view_key}' does not match between schemas, please recreate it"
     end
 
-    return extra_tables, missing_tables, mismatching_tables
+    command_suggestions = {
+      :extra_tables => extra_tables,
+      :missing_tables => missing_tables,
+      :mismatching_tables => mismatching_tables,
+      :mismatching_views => mismatching_views
+    }
+
+    return command_suggestions
   end
 
-  def self.schema_correction_suggestion (source_schema, target_schema, extra_tables, missing_tables, mismatching_tables)
+  def self.print_schema_correction_suggestions (source_schema, target_schema, suggestions)
 
-    extra_tables.each do |table_key, command|
+    suggestions[:extra_tables].each do |table_key, command|
       puts "\n-- #{table_key}".white.bold
       puts "#{command}".green.bold
     end
 
-    missing_tables.each do |table_key, command|
+    suggestions[:missing_tables].each do |table_key, command|
       puts "\n-- #{table_key}".white.bold
       _warn "#{command}"
     end
 
-    mismatching_tables.each do |table_key, table_value|
+    suggestions[:mismatching_tables].each do |table_key, table_value|
       puts "\n-- #{table_key}".white.bold
       # print all isolated commands
       table_value[:isolated_commands].each do |command|
@@ -603,6 +614,11 @@ module NandoSchemaDiff
       table_value[:warnings].each do |command|
         _warn "#{command}"
       end
+    end
+
+    suggestions[:mismatching_views].each do |view_key, command|
+      puts "\n-- #{view_key} (View)".white.bold
+      _warn "#{command}"
     end
   end
 
