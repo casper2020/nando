@@ -1,7 +1,7 @@
 module NandoSchemaDiff
 
   SCHEMA_PLACEHOLDER = '___SCHEMANAME___'
-  SCHEMA_VARIABLE = '#{schema_name}' # TODO: leave this as an env variable?
+  SCHEMA_VARIABLE = NandoMigrator.schema_variable
   TABLE_TYPE = {
     'r' => :tables,
     'v' => :views

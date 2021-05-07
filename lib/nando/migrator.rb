@@ -11,6 +11,9 @@ Dotenv.load('.env')
 
 module NandoMigrator
 
+  # TODO: review this is the best way to allow external classes to access module variables
+  class << self; attr_accessor :schema_variable; end
+
   def self.read_env_file
     @migration_table = ENV['MIGRATION_TABLE_NAME'] || 'schema_migrations'
     @migration_field = ENV['MIGRATION_TABLE_FIELD'] || 'version'
@@ -26,7 +29,8 @@ module NandoMigrator
     @db_port = match[5]
     @db_name = match[6]
 
-    @working_dir = '.' # TODO: add env variable for this
+    @working_dir = ENV['WORKING_DIR'] || '.'
+    @schema_variable = ENV['SCHEMA_VARIABLE'] || '#{schema_name}'
   end
 
   read_env_file()
