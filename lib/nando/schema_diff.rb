@@ -212,7 +212,7 @@ module NandoSchemaDiff
   def self.get_info_base_structure
     return {
       :tables => {
-        :missing => [],
+        :missing => {},
         :extra => [],
         :mismatching => {}
       },
@@ -260,7 +260,9 @@ module NandoSchemaDiff
     end
 
     if !(keys_diff = right_schema.keys - left_schema.keys).empty?
-      left_info[:tables][:missing] += keys_diff
+      keys_diff.each do |table_key|
+        left_info[:tables][:missing][table_key] = right_schema[table_key]
+      end
     end
   end
 
@@ -476,9 +478,9 @@ module NandoSchemaDiff
       extra_tables[table] = "DROP TABLE IF EXISTS #{source_schema}.#{table};"
     end
 
-    info[:tables][:missing].each do |table|
-      print_missing "Table '#{table}'"
-      missing_tables[table] = "Table '#{table}' does not exist in #{source_schema}"
+    info[:tables][:missing].each do |table_key, table_value|
+      print_missing "Table '#{table_key}'"
+      missing_tables[table_key] = build_create_table_lines(table_key, table_value)
     end
 
     # iterate over all tables with info
@@ -589,9 +591,13 @@ module NandoSchemaDiff
       puts "#{command}".green.bold
     end
 
-    suggestions[:missing_tables].each do |table_key, command|
+    suggestions[:missing_tables].each do |table_key, table_value|
       puts "\n-- #{table_key}".white.bold
-      _warn "#{command}"
+      puts "CREATE TABLE IF NOT EXISTS #{source_schema}.#{table_key};".green.bold
+      print_alter_table_commands(source_schema, table_key, table_value[:alter_tables])
+      table_value[:isolated_commands].each do |command|
+        puts "#{command};".green.bold
+      end
     end
 
     suggestions[:mismatching_tables].each do |table_key, table_value|
@@ -601,14 +607,7 @@ module NandoSchemaDiff
         puts "#{command};".green.bold
       end
 
-      # print all alter table commands necessary
-      if table_value[:alter_tables].length > 0
-        puts "ALTER TABLE #{source_schema}.#{table_key}".green.bold
-        table_value[:alter_tables].each_with_index do |command, index|
-          terminator = (index == table_value[:alter_tables].length - 1) ? ';' : ',';
-          puts "  #{command}#{terminator}".green.bold
-        end
-      end
+      print_alter_table_commands(source_schema, table_key, table_value[:alter_tables])
 
       # print warnings
       table_value[:warnings].each do |command|
@@ -634,6 +633,17 @@ module NandoSchemaDiff
     puts "? #{message}".yellow.bold
   end
 
+  # print all alter table commands together
+  def self.print_alter_table_commands (schema, table_key, commands)
+    if commands.length > 0
+      puts "ALTER TABLE #{schema}.#{table_key}".green.bold
+      commands.each_with_index do |command, index|
+        terminator = (index == commands.length - 1) ? ';' : ',';
+        puts "  #{command}#{terminator}".green.bold
+      end
+    end
+  end
+
   # takes 2 hashes and returns a object with both of the keys remapped
   def self.merge_left_right_hashes (left_hash, right_hash)
     left_rehashed = remap_hash(left_hash, 'left_')
@@ -652,6 +662,36 @@ module NandoSchemaDiff
   end
 
   # functions to build certain SQL commands
+  def self.build_create_table_lines(table_key, table_value)
+    alter_tables = []
+    isolated_commands = []
+
+    # columns
+    table_value[:columns].each do |column_key, column_value|
+      alter_tables << build_add_column_line(column_key, column_value)
+    end
+
+    # triggers
+    table_value[:triggers].each do |trigger_key, trigger_value|
+      isolated_commands << build_add_trigger_line(trigger_key, trigger_value)
+    end
+
+    # constraints
+    table_value[:constraints].each do |constraint_key, constraint_value|
+      alter_tables << build_add_constraint_line(constraint_key, constraint_value)
+    end
+
+    # indexes
+    table_value[:indexes].each do |index_key, index_value|
+      isolated_commands << build_add_index_line(index_key, index_value)
+    end
+
+    return {
+      :alter_tables => alter_tables,
+      :isolated_commands => isolated_commands
+    }
+  end
+
   def self.build_add_column_line (column_key, column_info)
     data_type = column_info[:column_datatype]
     has_default = column_info[:column_has_default] == 't' ? true : false
