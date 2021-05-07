@@ -506,7 +506,9 @@ module NandoSchemaDiff
 
       table_value[:columns][:mismatching].each do |column_key, column_value|
         print_mismatching "  Column '#{column_key}'"
-        mismatching_tables[table_key][:warnings] += build_mismatching_column_lines(column_key, column_value)
+        column_warnings, column_alter_tables = build_mismatching_column_lines(column_key, column_value)
+        mismatching_tables[table_key][:warnings] += column_warnings
+        mismatching_tables[table_key][:alter_tables] += column_alter_tables
       end
 
       # triggers
@@ -702,22 +704,26 @@ module NandoSchemaDiff
 
   def self.build_mismatching_column_lines (column_key, column_info)
     warnings = []
+    alter_tables = []
 
     if column_info[:left_column_num] != column_info[:right_column_num]
       warnings << "Column '#{column_key}' is on position '#{column_info[:left_column_num]}' on current schema, but on position '#{column_info[:right_column_num]}' in the target schema"
     end
     if column_info[:left_column_default] != column_info[:right_column_default]
-      warnings << "Column '#{column_key}' has default value '#{column_info[:left_column_default].to_s}' on current schema, but default value '#{column_info[:right_column_default].to_s}' in the target schema"
+      operation = column_info[:right_column_has_default] == 't' ? "SET DEFAULT #{column_info[:right_column_default]}" : "DROP DEFAULT"
+      warnings << "Column's '#{column_key}' DEFAULT value differs between schemas. Changing this property may cause problems, use with caution!"
+      alter_tables << "ALTER COLUMN #{column_key} #{operation}"
     end
     if column_info[:left_column_datatype] != column_info[:right_column_datatype]
-      warnings << "Column '#{column_key}' is of type '#{column_info[:left_column_datatype].to_s}' on current schema, but of type '#{column_info[:right_column_datatype].to_s}' in the target schema"
+      warnings << "Column's '#{column_key}' TYPE differs between schemas. Changing this property may cause problems, use with caution!"
+      alter_tables << "ALTER COLUMN #{column_key} SET DATA TYPE #{column_info[:right_column_datatype]}"
     end
     if column_info[:left_column_not_null] != column_info[:right_column_not_null]
-      left_nullable = column_info[:left_column_not_null] == 't' ? 'NOT NULLABLE' : 'NULLABLE'
-      right_nullable = column_info[:right_column_not_null] == 't' ? 'NOT NULLABLE' : 'NULLABLE'
-      warnings << "Column '#{column_key}' is '#{left_nullable}' on current schema, but '#{right_nullable}' in the target schema"
+      operation = column_info[:left_column_not_null] == 't' ? 'DROP' : 'SET'
+      warnings << "Column's '#{column_key}' NOT NULL property differs between schemas. Changing this property may cause problems, use with caution!"
+      alter_tables << "ALTER COLUMN #{column_key} #{operation} NOT NULL"
     end
-    return warnings
+    return warnings, alter_tables
   end
 
   def self.build_add_trigger_line (trigger_key, trigger_info)
