@@ -699,7 +699,7 @@ module NandoSchemaDiff
     has_default = column_info[:column_has_default] == 't' ? true : false
     default_string = has_default ? "DEFAULT #{column_info[:column_default]}" : ''
     nullable = column_info[:column_not_null] == 't' ? 'NOT NULL' : ''
-    return "ADD COLUMN #{column_key} #{data_type} #{nullable} #{default_string}".gsub(/\s+/, ' ').strip # build string, clear extra spaces
+    return "ADD COLUMN #{column_key} #{data_type} #{nullable} #{default_string}".gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE).gsub(/\s+/, ' ').strip # build string, replace placeholder, clear extra spaces
   end
 
   def self.build_mismatching_column_lines (column_key, column_info)
