@@ -593,7 +593,7 @@ module NandoSchemaDiff
 
     suggestions[:missing_tables].each do |table_key, table_value|
       puts "\n-- #{table_key}".white.bold
-      puts "CREATE TABLE IF NOT EXISTS #{source_schema}.#{table_key};".green.bold
+      puts "CREATE TABLE IF NOT EXISTS #{source_schema}.#{table_key}();".green.bold
       print_alter_table_commands(source_schema, table_key, table_value[:alter_tables])
       table_value[:isolated_commands].each do |command|
         puts "#{command};".green.bold
