@@ -62,18 +62,18 @@ module NandoSchemaDiff
     check_mismatching_indexes(target[:tables], source[:tables], target_info, source_info)
 
 
-    source_suggestions = print_diff_info(source_info, source_schema, target_schema)
-    target_suggestions = print_diff_info(target_info, source_schema, target_schema)
+    source_suggestions = print_diff_info(source_info, SCHEMA_VARIABLE, source_schema, target_schema)
+    target_suggestions = print_diff_info(target_info, SCHEMA_VARIABLE, target_schema, source_schema)
 
     # TODO: ask user if he wants the diff
 
     # suggestions
     puts "\n\n===========================//===========================\n".magenta.bold
     puts "\nSuggestion for ".magenta.bold + "'up'".white.bold + ":".magenta.bold
-    print_schema_correction_suggestions(source_schema, target_schema, source_suggestions)
+    print_schema_correction_suggestions(SCHEMA_VARIABLE, source_suggestions)
 
     puts "\nSuggestion for ".magenta.bold + "'down'".white.bold + ":".magenta.bold
-    print_schema_correction_suggestions(source_schema, target_schema, target_suggestions)
+    print_schema_correction_suggestions(SCHEMA_VARIABLE, target_suggestions)
     puts ""
   end
 
@@ -465,7 +465,7 @@ module NandoSchemaDiff
     end
   end
 
-  def self.print_diff_info (info, source_schema, target_schema)
+  def self.print_diff_info (info, suggestion_schema, source_schema, target_schema)
     puts "\nComparing '#{source_schema}' to '#{target_schema}'".magenta.bold
 
     extra_tables = {}
@@ -475,7 +475,7 @@ module NandoSchemaDiff
 
     info[:tables][:extra].each do |table|
       print_extra "Table '#{table}'"
-      extra_tables[table] = "DROP TABLE IF EXISTS #{source_schema}.#{table};"
+      extra_tables[table] = "DROP TABLE IF EXISTS #{suggestion_schema}.#{table};"
     end
 
     info[:tables][:missing].each do |table_key, table_value|
@@ -514,7 +514,7 @@ module NandoSchemaDiff
       # triggers
       table_value[:triggers][:extra].each do |trigger|
         print_extra "  Trigger '#{trigger}'"
-        mismatching_tables[table_key][:isolated_commands] << "DROP TRIGGER IF EXISTS #{trigger} ON #{source_schema}.#{table_key}"
+        mismatching_tables[table_key][:isolated_commands] << "DROP TRIGGER IF EXISTS #{trigger} ON #{suggestion_schema}.#{table_key}"
       end
 
       table_value[:triggers][:missing].each do |trigger_key, trigger_value|
@@ -546,7 +546,7 @@ module NandoSchemaDiff
       # indexes
       table_value[:indexes][:extra].each do |index|
         print_extra "  Index '#{index}'"
-        mismatching_tables[table_key][:isolated_commands] << "DROP INDEX IF EXISTS #{source_schema}.#{index}"
+        mismatching_tables[table_key][:isolated_commands] << "DROP INDEX IF EXISTS #{suggestion_schema}.#{index}"
       end
 
       table_value[:indexes][:missing].each do |index_key, index_value|
@@ -586,7 +586,7 @@ module NandoSchemaDiff
     return command_suggestions
   end
 
-  def self.print_schema_correction_suggestions (source_schema, target_schema, suggestions)
+  def self.print_schema_correction_suggestions (schema_suggestion, suggestions)
 
     suggestions[:extra_tables].each do |table_key, command|
       puts "\n-- #{table_key}".white.bold
@@ -595,8 +595,8 @@ module NandoSchemaDiff
 
     suggestions[:missing_tables].each do |table_key, table_value|
       puts "\n-- #{table_key}".white.bold
-      puts "CREATE TABLE IF NOT EXISTS #{source_schema}.#{table_key}();".green.bold
-      print_alter_table_commands(source_schema, table_key, table_value[:alter_tables])
+      puts "CREATE TABLE IF NOT EXISTS #{schema_suggestion}.#{table_key}();".green.bold
+      print_alter_table_commands(schema_suggestion, table_key, table_value[:alter_tables])
       table_value[:isolated_commands].each do |command|
         puts "#{command};".green.bold
       end
@@ -609,7 +609,7 @@ module NandoSchemaDiff
         puts "#{command};".green.bold
       end
 
-      print_alter_table_commands(source_schema, table_key, table_value[:alter_tables])
+      print_alter_table_commands(schema_suggestion, table_key, table_value[:alter_tables])
 
       # print warnings
       table_value[:warnings].each do |command|
