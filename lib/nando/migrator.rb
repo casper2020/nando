@@ -277,6 +277,7 @@ module NandoMigrator
                                :port => @db_port,
                                :dbname => @db_name,
                                :user=> @db_username)
+    return conn
   end
 
 end

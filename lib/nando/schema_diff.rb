@@ -110,9 +110,9 @@ module NandoSchemaDiff
              t.relname      AS table_name,
              t.relkind      AS table_type,
              a.attname      AS column_name,
-             a.attnum       AS column_num,
              a.atthasdef    AS column_has_default,
              a.attnotnull   AS column_not_null,
+             ROW_NUMBER () OVER (PARTITION BY t.oid ORDER BY a.attnum) AS column_num,
              pg_catalog.format_type(a.atttypid, a.atttypmod) AS column_datatype,
              (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid) for 128)
                 FROM pg_catalog.pg_attrdef d
@@ -124,11 +124,12 @@ module NandoSchemaDiff
          AND NOT a.attisdropped
          AND t.relkind IN ('r', 'v')
          AND n.nspname = '#{curr_schema}'
+       ORDER BY column_num
     ")
 
     for row in results do
       schema_structure[TABLE_TYPE[row['table_type']]][row['table_name']][:columns][row['column_name']] = {
-        :column_num           => row['column_num'],
+        :column_num           => row['column_num'], # column_num does not use a.attnum, since that field keeps incrementing after dropping/adding columns
         :column_has_default   => row['column_has_default'],
         :column_default       => row['column_default'].nil? ? row['column_default'] : row['column_default'].gsub(curr_schema, ''), # remove the schema, since sequences include it in their name
         :column_not_null      => row['column_not_null'],
