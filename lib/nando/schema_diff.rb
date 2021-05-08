@@ -603,6 +603,9 @@ module NandoSchemaDiff
       table_value[:isolated_commands].each do |command|
         puts "#{command};".green.bold
       end
+      table_value[:warnings].each do |warning|
+        _warn "#{warning}"
+      end
     end
 
     suggestions[:mismatching_tables].each do |table_key, table_value|
@@ -676,6 +679,7 @@ module NandoSchemaDiff
   def self.build_create_table_lines(table_key, table_value)
     alter_tables = []
     isolated_commands = []
+    warnings = []
 
     # columns
     table_value[:columns].each do |column_key, column_value|
@@ -697,9 +701,13 @@ module NandoSchemaDiff
       isolated_commands << build_add_index_line(index_key, index_value)
     end
 
+    # warnings
+    warnings << 'When creating a table, keep in mind the tablespace!'
+
     return {
       :alter_tables => alter_tables,
-      :isolated_commands => isolated_commands
+      :isolated_commands => isolated_commands,
+      :warnings => warnings
     }
   end
 
