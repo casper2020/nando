@@ -703,6 +703,7 @@ module NandoSchemaDiff
 
     # warnings
     warnings << 'When creating a table, keep in mind the tablespace!'
+    warnings << 'This is merely a suggestion of the table structure, it\'s prefered to create the table columns inside the CREATE TABLE command'
 
     return {
       :alter_tables => alter_tables,
