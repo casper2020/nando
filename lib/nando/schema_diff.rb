@@ -508,7 +508,7 @@ module NandoSchemaDiff
 
       table_value[:columns][:missing].each do |column_key, column_value|
         print_missing "  Column '#{column_key}'"
-        mismatching_tables[table_key][:alter_tables] << build_add_column_line(column_key, column_value)
+        mismatching_tables[table_key][:alter_tables] << build_add_column_line(column_key, column_value, table_key)
       end
 
       table_value[:columns][:mismatching].each do |column_key, column_value|
@@ -679,7 +679,7 @@ module NandoSchemaDiff
 
     # columns
     table_value[:columns].each do |column_key, column_value|
-      alter_tables << build_add_column_line(column_key, column_value)
+      alter_tables << build_add_column_line(column_key, column_value, table_key)
     end
 
     # triggers
@@ -703,12 +703,21 @@ module NandoSchemaDiff
     }
   end
 
-  def self.build_add_column_line (column_key, column_info)
-    data_type = column_info[:column_datatype]
-    has_default = column_info[:column_has_default] == 't' ? true : false
-    default_string = has_default ? "DEFAULT #{column_info[:column_default]}" : ''
-    nullable = column_info[:column_not_null] == 't' ? 'NOT NULL' : ''
-    return "ADD COLUMN #{column_key} #{data_type} #{nullable} #{default_string}".gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE).gsub(/\s+/, ' ').strip # build string, replace placeholder, clear extra spaces
+  def self.build_add_column_line (column_key, column_info, table_key)
+    # if the column has a default value that matches serials, suggest column as SERIAL
+    # in serials, the default value is always like "nextval('<table_name>_<col_name>_seq')"
+    if column_info[:column_default] == "nextval('#{SCHEMA_PLACEHOLDER}.#{table_key}_#{column_key}_seq'::regclass)"
+      add_column_line = "ADD COLUMN #{column_key} SERIAL"
+    else
+      data_type = column_info[:column_datatype]
+      has_default = column_info[:column_has_default] == 't' ? true : false
+      default_string = has_default ? "DEFAULT #{column_info[:column_default]}" : ''
+      nullable = column_info[:column_not_null] == 't' ? 'NOT NULL' : ''
+      add_column_line = "ADD COLUMN #{column_key} #{data_type} #{nullable} #{default_string}"
+    end
+
+    # replace placeholder, clear extra spaces
+    return add_column_line.gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE).gsub(/\s+/, ' ').strip
   end
 
   def self.build_mismatching_column_lines (column_key, column_info)
