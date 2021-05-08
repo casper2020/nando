@@ -131,7 +131,7 @@ module NandoSchemaDiff
       schema_structure[TABLE_TYPE[row['table_type']]][row['table_name']][:columns][row['column_name']] = {
         :column_num           => row['column_num'], # column_num does not use a.attnum, since that field keeps incrementing after dropping/adding columns
         :column_has_default   => row['column_has_default'],
-        :column_default       => row['column_default'].nil? ? row['column_default'] : row['column_default'].gsub(curr_schema, ''), # remove the schema, since sequences include it in their name
+        :column_default       => row['column_default'].nil? ? row['column_default'] : row['column_default'].gsub(curr_schema, SCHEMA_PLACEHOLDER), # remove the schema, since sequences include it in their name
         :column_not_null      => row['column_not_null'],
         :column_datatype      => row['column_datatype']
       }
@@ -489,12 +489,18 @@ module NandoSchemaDiff
       print_mismatching "Table '#{table_key}'"
 
       mismatching_tables[table_key] = {
-        :isolated_commands => [],
+        :isolated_drop_commands => [],
+        :isolated_create_commands => [],
         :alter_tables => [],
         :warnings => []
       }
 
-      # columns
+      # alter tables
+      table_value[:constraints][:extra].each do |constraint|
+        print_extra "  Constraint '#{constraint}'"
+        mismatching_tables[table_key][:alter_tables] << "DROP CONSTRAINT IF EXISTS \"#{constraint}\""
+      end
+
       table_value[:columns][:extra].each do |column|
         print_extra "  Column '#{column}'"
         mismatching_tables[table_key][:alter_tables] << "DROP COLUMN IF EXISTS #{column}"
@@ -512,47 +518,42 @@ module NandoSchemaDiff
         mismatching_tables[table_key][:alter_tables] += column_alter_tables
       end
 
-      # triggers
-      table_value[:triggers][:extra].each do |trigger|
-        print_extra "  Trigger '#{trigger}'"
-        mismatching_tables[table_key][:isolated_commands] << "DROP TRIGGER IF EXISTS #{trigger} ON #{suggestion_schema}.#{table_key}"
-      end
-
-      table_value[:triggers][:missing].each do |trigger_key, trigger_value|
-        print_missing "  Trigger '#{trigger_key}'"
-        mismatching_tables[table_key][:isolated_commands] << build_add_trigger_line(trigger_key, trigger_value)
-      end
-
-      table_value[:triggers][:mismatching].each do |trigger_key, trigger_value|
-        print_mismatching "  Trigger '#{trigger_key}'"
-        mismatching_tables[table_key][:warnings] += build_mismatching_trigger_lines(trigger_key, trigger_value)
-      end
-
-      # constraints
-      table_value[:constraints][:extra].each do |constraint|
-        print_extra "  Constraint '#{constraint}'"
-        mismatching_tables[table_key][:alter_tables] << "DROP CONSTRAINT IF EXISTS \"#{constraint}\""
-      end
-
       table_value[:constraints][:missing].each do |constraint_key, constraint_value|
         print_missing "  Constraint '#{constraint_key}'"
         mismatching_tables[table_key][:alter_tables] << build_add_constraint_line(constraint_key, constraint_value)
       end
 
+      # isolated drop commands
+      table_value[:triggers][:extra].each do |trigger|
+        print_extra "  Trigger '#{trigger}'"
+        mismatching_tables[table_key][:isolated_drop_commands] << "DROP TRIGGER IF EXISTS #{trigger} ON #{suggestion_schema}.#{table_key}"
+      end
+
+      table_value[:indexes][:extra].each do |index|
+        print_extra "  Index '#{index}'"
+        mismatching_tables[table_key][:isolated_drop_commands] << "DROP INDEX IF EXISTS #{suggestion_schema}.#{index}"
+      end
+
+      # isolated create commands
+      table_value[:indexes][:missing].each do |index_key, index_value|
+        print_missing "  Index '#{index_key}'"
+        mismatching_tables[table_key][:isolated_create_commands] << build_add_index_line(index_key, index_value)
+      end
+
+      table_value[:triggers][:missing].each do |trigger_key, trigger_value|
+        print_missing "  Trigger '#{trigger_key}'"
+        mismatching_tables[table_key][:isolated_create_commands] << build_add_trigger_line(trigger_key, trigger_value)
+      end
+
+      # warnings
+      table_value[:triggers][:mismatching].each do |trigger_key, trigger_value|
+        print_mismatching "  Trigger '#{trigger_key}'"
+        mismatching_tables[table_key][:warnings] += build_mismatching_trigger_lines(trigger_key, trigger_value)
+      end
+
       table_value[:constraints][:mismatching].each do |constraint_key, constraint_value|
         print_mismatching "  Constraint '#{constraint_key}'"
         mismatching_tables[table_key][:warnings] += build_mismatching_constraint_lines(constraint_key, constraint_value)
-      end
-
-      # indexes
-      table_value[:indexes][:extra].each do |index|
-        print_extra "  Index '#{index}'"
-        mismatching_tables[table_key][:isolated_commands] << "DROP INDEX IF EXISTS #{suggestion_schema}.#{index}"
-      end
-
-      table_value[:indexes][:missing].each do |index_key, index_value|
-        print_missing "  Index '#{index_key}'"
-        mismatching_tables[table_key][:isolated_commands] << build_add_index_line(index_key, index_value)
       end
 
       table_value[:indexes][:mismatching].each do |index_key, index_value|
@@ -562,6 +563,7 @@ module NandoSchemaDiff
 
     end
 
+    # iterate over all views with info
     info[:views][:extra].each do |view_key|
       print_extra "View '#{view_key}'"
       mismatching_views[view_key] = "View '#{view_key}' exists in '#{source_schema}' but not in the target schema. Might need to drop it"
@@ -605,12 +607,18 @@ module NandoSchemaDiff
 
     suggestions[:mismatching_tables].each do |table_key, table_value|
       puts "\n-- #{table_key}".white.bold
-      # print all isolated commands
-      table_value[:isolated_commands].each do |command|
+
+      # print isolated drop commands
+      table_value[:isolated_drop_commands].each do |command|
         puts "#{command};".green.bold
       end
 
       print_alter_table_commands(schema_suggestion, table_key, table_value[:alter_tables])
+
+      # print isolated create commands
+      table_value[:isolated_create_commands].each do |command|
+        puts "#{command};".green.bold
+      end
 
       # print warnings
       table_value[:warnings].each do |command|
@@ -711,7 +719,7 @@ module NandoSchemaDiff
       warnings << "Column '#{column_key}' is on position '#{column_info[:left_column_num]}' on current schema, but on position '#{column_info[:right_column_num]}' in the target schema"
     end
     if column_info[:left_column_default] != column_info[:right_column_default]
-      operation = column_info[:right_column_has_default] == 't' ? "SET DEFAULT #{column_info[:right_column_default]}" : "DROP DEFAULT"
+      operation = column_info[:right_column_has_default] == 't' ? "SET DEFAULT #{column_info[:right_column_default]}".gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE) : "DROP DEFAULT"
       warnings << "Column's '#{column_key}' DEFAULT value differs between schemas. Changing this property may cause problems, use with caution!"
       alter_tables << "ALTER COLUMN #{column_key} #{operation}"
     end
