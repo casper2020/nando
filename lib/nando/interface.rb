@@ -13,4 +13,15 @@ module NandoInterface
     return all_text.chomp
   end
 
+  # if input is Y/y return true, else return false
+  def self.get_user_input_boolean (message)
+    puts "\n#{message} (Y/N)".magenta.bold
+    input = gets.downcase.strip.chomp
+    if input == 'y'
+      return true
+    else
+      return false
+    end
+  end
+
 end

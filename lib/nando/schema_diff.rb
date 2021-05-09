@@ -65,7 +65,12 @@ module NandoSchemaDiff
     source_suggestions = print_diff_info(source_info, SCHEMA_VARIABLE, source_schema, target_schema)
     target_suggestions = print_diff_info(target_info, SCHEMA_VARIABLE, target_schema, source_schema)
 
-    # TODO: ask user if he wants the diff
+    # TODO: might skip this if there is no diff
+
+    wants_suggestions = NandoInterface.get_user_input_boolean("Do want to see the suggestions for changing the schema?")
+    if !wants_suggestions
+      return
+    end
 
     # suggestions
     puts "\n\n===========================//===========================\n".magenta.bold
