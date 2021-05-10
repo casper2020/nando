@@ -188,7 +188,7 @@ module NandoMigrator
     migration_files = []
     for filename in files do
       if !/\d\_.*\.rb$/.match(filename)
-        puts "Warning: #{filename} does not have a valid migration name"
+        _warn "#{filename} does not have a valid migration name. Skipping!"
         next
       end
 
@@ -205,9 +205,8 @@ module NandoMigrator
     migration_files = []
     for filename in files do
       match = /(\d+)\_.*\.rb$/.match(filename)
-      if match[0].nil?
-        # TODO: test this again for rollback
-        puts "Warning: #{filename} does not have a valid migration name"
+      if match.nil?
+        _warn "#{filename} does not have a valid migration name. Skipping!"
         next
       end
 
