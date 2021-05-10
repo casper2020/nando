@@ -45,6 +45,11 @@ begin
     NandoMigrator.migrate()
   when 'down'
     NandoMigrator.rollback()
+  when 'apply'
+    if ARGV[0].nil?
+      raise KeyError # ARGV[0] is the migration version to apply
+    end
+    NandoMigrator.apply(options, ARGV)
   when 'new'
     if ARGV[0].nil?
       raise KeyError # ARGV[0] is the new migration name

@@ -78,6 +78,43 @@ module NandoMigrator
 
   end
 
+  # applies specific migration
+  def self.apply (options = {}, args = [])
+    _debug 'Applying!'
+
+    migration_version_to_apply = args[0].to_s
+    migration_files = get_migration_files(@migration_dir)
+
+    if migration_files.length == 0
+      STDERR.puts "No migration files were found in \"#{@migration_dir}\"!"
+      exit 1
+    end
+
+    @db_connection = get_database_connection()
+    create_schema_migrations_table_if_not_exists()
+    applied_migrations = get_applied_migrations()
+
+    migration_has_run = applied_migrations.include?(migration_version_to_apply)
+    found_migration = false
+
+    for filename in migration_files do
+      migration_version, migration_name = NandoUtils.get_migration_version_and_name_from_file_path(filename)
+
+      if migration_version.to_s != migration_version_to_apply.to_s
+        next
+      end
+
+      found_migration = true
+      execute_migration_method(:up, filename, migration_name, migration_version, migration_has_run)
+      _debug 'There should only be 1 migration with each version, so we can break'
+      break
+    end
+
+    if !found_migration
+      _error "No migration file with version '#{migration_version_to_apply}' was found!"
+    end
+  end
+
   # rollbacks 1 migration (or more depending on argument)
   def self.rollback (options = {})
     _debug 'Rollback!'
@@ -212,7 +249,7 @@ module NandoMigrator
     return migrations_to_rollback
   end
 
-  def self.execute_migration_method (method, filename, migration_name, migration_version)
+  def self.execute_migration_method (method, filename, migration_name, migration_version, skip_insert_version = false)
     if method == :up
       migrating = true
     else
@@ -232,7 +269,12 @@ module NandoMigrator
     rescue => exception
       raise Nando::MigratingError.new(exception)
     end
-    update_migration_table(migration_version, migrating)
+
+    if !skip_insert_version
+      update_migration_table(migration_version, migrating)
+    else
+      puts "Migration '#{migration_version}' was already in '#{@migration_table}', applying but not re-inserting it into the table"
+    end
   end
 
   def self.update_migration_table (version, to_apply = true)
