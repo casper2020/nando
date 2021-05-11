@@ -130,10 +130,10 @@ module NandoMigrator
       exit 1
     end
 
-    # TODO: create function to just get necessary files
     migration_files = get_migration_files_to_rollback(@migration_dir, migrations_to_revert)
     if migration_files.length == 0
-      STDERR.puts "No migration files were found in \"#{@migration_dir}\"!"
+      # TODO: this won't work as expected if we start accepting rollbacks of multiple files, since as long as 1 file is valid it will be rollbacked
+      STDERR.puts "Could not find any valid files in \"#{@migration_dir}\" that match the migrations to revert #{migrations_to_revert}!"
       exit 1
     end
 
