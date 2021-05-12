@@ -263,9 +263,9 @@ module MigrationUpdater
 
     end
 
-    # no previous def is found, create a annotation with just a drop, maybe? + warning?
     if function_previous_block.nil?
-      @lines.insert(down_annotation_index + 1, "    # TODO: insert a DROP? Warn the user?\n")
+      # TODO: decide if I need to do anything more when I don't find a previous definition (like add a DROP)
+      _warn "No previous definition was found for function '#{function_name}'"
       return
     end
 
