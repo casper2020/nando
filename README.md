@@ -22,7 +22,21 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+```nando up``` - Executes all the migrations that are not yet on the ```schema_migrations``` table
+
+```nando down``` - Rollbacks the last migration in the ```schema_migrations``` table
+
+```nando apply <version>``` - Applies the migration with the specified version (even if it was already executed). Intended for development, not production
+
+```nando new <migration name>``` - Creates a new migration with the specified name. Use the ```-t/--type``` flag to specify the type of migration: ```[Migration|MigrationWithoutTransaction]```
+
+```nando parse <source folder> <destination folder>``` - Parses all the ```dbmate``` migrations in the source folder into ```Nando``` migration in the destination folder
+
+```nando baseline``` - Creates a baseline Nando migration with all the functions currently in the database (used to ensure ```update``` always has a migration to revert to)
+
+```nando update <path to migration>``` - Updates the specified migration (searches for Nando annotations and updates the source code within the respective blocks). Use ```-f/--function``` to add one or more functions to the migration file
+
+```nando diff <source schema> <target schema>``` - WIP, but compares 2 schemas in the database and suggests SQL commands to fix any changes found
 
 ## Development
 
