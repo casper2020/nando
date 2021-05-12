@@ -16,7 +16,8 @@ module NandoInterface
   # if input is Y/y return true, else return false
   def self.get_user_input_boolean (message)
     puts "\n#{message} (Y/N)".magenta.bold
-    input = gets.downcase.strip.chomp
+    # TODO: review error when not using $stdin (might need to use it above as well)
+    input = $stdin.gets.chomp.downcase.strip
     if input == 'y'
       return true
     else

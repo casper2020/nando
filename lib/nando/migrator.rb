@@ -176,8 +176,7 @@ module NandoMigrator
   def self.diff_schemas (options = {}, args = [])
     _debug 'Schema Diff'
 
-    # TODO: replace hardcoded values (source_schema, target_schema)
-    NandoSchemaDiff.diff_schemas('entity_1', 'entity_2')
+    NandoSchemaDiff.diff_schemas(args[0], args[1])
   end
 
   # --------------------------------------------------------

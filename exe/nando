@@ -68,6 +68,9 @@ begin
     end
     NandoMigrator.update_migration(options, ARGV)
   when 'diff'
+    if ARGV[0].nil? || ARGV[1].nil?
+      raise KeyError
+    end
     NandoMigrator.diff_schemas(options, ARGV)
   else
     STDERR.puts %Q[Invalid command "#{action}". Run "#{File.basename($0)} --help" for details.]
