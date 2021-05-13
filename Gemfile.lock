@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    nando (0.5.0)
+    nando (1.0.4)
       awesome_print (~> 1.8.0)
       colorize (~> 0.8.1)
       dotenv (~> 2.7.6)
