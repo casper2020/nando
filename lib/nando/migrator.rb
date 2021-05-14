@@ -271,7 +271,7 @@ module NandoMigrator
     begin
       migration_class.execute_migration(method)
     rescue => exception
-      raise Nando::MigratingError.new(exception)
+      raise Nando::GenericError.new(exception)
     end
 
     if !skip_insert_version
@@ -292,7 +292,7 @@ module NandoMigrator
   def self.camelize_migration_type (migration_type)
     camelize_migration_type = migration_type.camelize
     if !['Migration', 'MigrationWithoutTransaction'].include?(camelize_migration_type)
-      raise Nando::MigrationTypeError.new(migration_type) # sending the input value as the error, for easier understanding of the problem for users
+      raise Nando::GenericError.new("Invalid migration type '#{migration_type}'")
     end
     return camelize_migration_type
   end

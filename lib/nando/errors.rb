@@ -1,17 +1,11 @@
 module Nando
-  class MigrationTypeError < StandardError
-    def initialize (type)
-      super
-    end
-  end
-
-  class MigratingError < StandardError
+  class GenericError < StandardError
     def initialize (error)
       super
     end
   end
 
-  class GenericError < StandardError
+  class InputError < StandardError
     def initialize (error)
       super
     end
