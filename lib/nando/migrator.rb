@@ -312,11 +312,11 @@ module NandoMigrator
   end
 
   def self.get_database_connection
-    # TODO: might need to pass password, if not null?
-    conn = PG::Connection.open(:hostaddr => @db_host,
+    conn = PG::Connection.open(:host => @db_host,
                                :port => @db_port,
                                :dbname => @db_name,
-                               :user=> @db_username)
+                               :user => @db_username,
+                               :password => @db_password)
     return conn
   end
 
