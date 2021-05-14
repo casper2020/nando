@@ -22,6 +22,12 @@ module NandoMigrator
     # accepts urls in the same format as dbmate => protocol://username:password@host:port/database_name
     match = /([a-zA-Z]+)\:\/\/(\w+)\:(\w+)\@([\w\.]+)\:(\d+)\/(\w+)/.match(ENV['DATABASE_URL'])
 
+    if match.nil?
+      # TODO: replace NandoMigrator with a class, move this code to the initialize and raise a generic error (doesn't work as is)
+      puts 'No .env file was found, or no valid DATABASE_URL variable was found in it'
+      exit 1
+    end
+
     @db_protocol = match[1]
     @db_username = match[2]
     @db_password = match[3]
