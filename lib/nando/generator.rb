@@ -8,7 +8,7 @@ module MigrationGenerator
 
     if !File.directory?(dir)
       STDERR.puts %Q[No directory "#{dir}" was found.]
-      exit 3
+      exit 1
     end
 
     case migration_type
@@ -41,7 +41,7 @@ module MigrationGenerator
 
     if !File.directory?(dir)
       STDERR.puts %Q[No directory "#{dir}" was found.]
-      exit 3
+      exit 1
     end
 
     @db_connection = NandoMigrator.get_database_connection();
