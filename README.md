@@ -30,7 +30,7 @@ Or install it yourself as:
 
 ```nando new <migration name>``` - Creates a new migration with the specified name. Use the ```-t/--type``` flag to specify the type of migration: ```[Migration|MigrationWithoutTransaction]```
 
-```nando parse <source folder> <destination folder>``` - Parses all the ```dbmate``` migrations in the source folder into ```Nando``` migration in the destination folder
+```nando parse <source folder> <destination folder>``` - Parses all the ```dbmate``` migrations in the source folder into ```Nando``` migrations in the destination folder
 
 ```nando baseline``` - Creates a baseline Nando migration with all the functions currently in the database (used to ensure ```update``` always has a migration to revert to)
 

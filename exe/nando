@@ -10,15 +10,7 @@ options = {}
 # TODO: review this, error when deploying Gem
 # gem_spec = Gem::Specification.find_by_name('nando') # TODO: loading Gem specification by name, there might be a better way
 
-# nando [up|down|new] [options]
-
 parser = OptionParser.new do |opt|
-  # TODO: review this
-  opt.banner = "Usage \"nando [options]\""
-  # opt.define_head gem_spec.summary
-
-  opt.separator ""
-
   opt.on("-t", "--type [VALUE]", String) do |type|
     options[:type] = type
   end
@@ -31,11 +23,9 @@ parser = OptionParser.new do |opt|
     end
   end
 
-  opt.separator ""
-
   opt.on("-h", "--help", "Show this message") do |value|
-    puts opt
-    exit
+    NandoInterface.print_help_message()
+    exit 0
   end
 end
 
@@ -81,13 +71,13 @@ begin
 
 rescue OptionParser::InvalidArgument => e
   STDERR.puts "ERROR: #{e.message.capitalize}"
-  # TODO: show "help"
+  NandoInterface.print_help_message()
   exit 1
 rescue Nando::GenericError => e
   STDERR.puts "ERROR: #{e}"
   exit 1
 rescue Nando::InputError => e
   STDERR.puts "ERROR: #{e}"
-  # TODO: show "help"
+  NandoInterface.print_help_message()
   exit 1
 end
