@@ -7,7 +7,7 @@ module MigrationGenerator
     dir = File.dirname(filepath)
 
     if !File.directory?(dir)
-      STDERR.puts %Q[No directory "#{dir}" was found.]
+      _error "No directory '#{dir}' was found"
       exit 1
     end
 
@@ -40,7 +40,7 @@ module MigrationGenerator
     dir = File.dirname(filepath)
 
     if !File.directory?(dir)
-      STDERR.puts %Q[No directory "#{dir}" was found.]
+      _error "No directory '#{dir}' was found"
       exit 1
     end
 

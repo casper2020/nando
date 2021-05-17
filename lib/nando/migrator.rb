@@ -64,7 +64,7 @@ module NandoMigrator
     migration_files = get_migration_files(@migration_dir)
 
     if migration_files.length == 0
-      STDERR.puts "No migration files were found in \"#{@migration_dir}\"!"
+      _error "No migration files were found in '#{@migration_dir}'!"
       exit 1
     end
 
@@ -92,7 +92,7 @@ module NandoMigrator
     migration_files = get_migration_files(@migration_dir)
 
     if migration_files.length == 0
-      STDERR.puts "No migration files were found in \"#{@migration_dir}\"!"
+      _error "No migration files were found in '#{@migration_dir}'!"
       exit 1
     end
 
@@ -132,14 +132,14 @@ module NandoMigrator
     migrations_to_revert = get_migrations_to_revert(rollback_count)
 
     if migrations_to_revert.length == 0
-      STDERR.puts "There are no migrations to revert!"
+      _error "There are no migrations to revert!"
       exit 1
     end
 
     migration_files = get_migration_files_to_rollback(@migration_dir, migrations_to_revert)
     if migration_files.length == 0
       # TODO: this won't work as expected if we start accepting rollbacks of multiple files, since as long as 1 file is valid it will be rollbacked
-      STDERR.puts "Could not find any valid files in \"#{@migration_dir}\" that match the migrations to revert #{migrations_to_revert}!"
+      _error "Could not find any valid files in '#{@migration_dir}' that match the migrations to revert #{migrations_to_revert}!"
       exit 1
     end
 
@@ -188,6 +188,10 @@ module NandoMigrator
   # --------------------------------------------------------
 
   def self.get_migration_files (directory)
+    if !File.directory?(directory)
+      _error "No directory '#{directory}' was found"
+      exit 1
+    end
     files = Dir.children(directory)
 
     migration_files = []
@@ -205,6 +209,10 @@ module NandoMigrator
 
   # TODO: might merge with "get_migration_files"
   def self.get_migration_files_to_rollback (directory, versions_to_rollback)
+    if !File.directory?(directory)
+      _error "No directory '#{directory}' was found"
+      exit 1
+    end
     files = Dir.children(directory)
 
     migration_files = []
@@ -309,7 +317,7 @@ module NandoMigrator
          AND table_name = '#{@migration_table}')")
 
     if results[0]["exists"] == 'f'
-      puts "Table \"#{@migration_table}\" does not exist, creating one"
+      _warn "Table '#{@migration_table}' does not exist, creating one"
       @db_connection.exec("CREATE TABLE public.#{@migration_table} (
         #{@migration_field}     VARCHAR(255) PRIMARY KEY,
         executed_at             timestamp DEFAULT NOW()

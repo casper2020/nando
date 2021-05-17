@@ -70,14 +70,14 @@ begin
   end
 
 rescue OptionParser::InvalidArgument => e
-  STDERR.puts "ERROR: #{e.message.capitalize}"
+  _error "#{e.message.capitalize}"
   NandoInterface.print_help_message()
   exit 1
 rescue Nando::GenericError => e
-  STDERR.puts "ERROR: #{e}"
+  _error "#{e}"
   exit 1
 rescue Nando::InputError => e
-  STDERR.puts "ERROR: #{e}"
+  _error "#{e}"
   NandoInterface.print_help_message()
   exit 1
 end
