@@ -7,8 +7,7 @@ module MigrationGenerator
     dir = File.dirname(filepath)
 
     if !File.directory?(dir)
-      _error "No directory '#{dir}' was found"
-      exit 1
+      raise Nando::GenericError.new("No directory '#{dir}' was found")
     end
 
     case migration_type
@@ -40,8 +39,7 @@ module MigrationGenerator
     dir = File.dirname(filepath)
 
     if !File.directory?(dir)
-      _error "No directory '#{dir}' was found"
-      exit 1
+      raise Nando::GenericError.new("No directory '#{dir}' was found")
     end
 
     @db_connection = NandoMigrator.get_database_connection();

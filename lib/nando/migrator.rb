@@ -64,8 +64,7 @@ module NandoMigrator
     migration_files = get_migration_files(@migration_dir)
 
     if migration_files.length == 0
-      _error "No migration files were found in '#{@migration_dir}'!"
-      exit 1
+      raise Nando::GenericError.new("No migration files were found in '#{@migration_dir}'")
     end
 
     @db_connection = get_database_connection()
@@ -92,8 +91,7 @@ module NandoMigrator
     migration_files = get_migration_files(@migration_dir)
 
     if migration_files.length == 0
-      _error "No migration files were found in '#{@migration_dir}'!"
-      exit 1
+      raise Nando::GenericError.new("No migration files were found in '#{@migration_dir}'")
     end
 
     @db_connection = get_database_connection()
@@ -132,15 +130,13 @@ module NandoMigrator
     migrations_to_revert = get_migrations_to_revert(rollback_count)
 
     if migrations_to_revert.length == 0
-      _error "There are no migrations to revert!"
-      exit 1
+      raise Nando::GenericError.new("There are no migrations to revert")
     end
 
     migration_files = get_migration_files_to_rollback(@migration_dir, migrations_to_revert)
     if migration_files.length == 0
       # TODO: this won't work as expected if we start accepting rollbacks of multiple files, since as long as 1 file is valid it will be rollbacked
-      _error "Could not find any valid files in '#{@migration_dir}' that match the migrations to revert #{migrations_to_revert}!"
-      exit 1
+      raise Nando::GenericError.new("Could not find any valid files in '#{@migration_dir}' that match the migrations to revert #{migrations_to_revert}")
     end
 
     for migration_index in 0...migration_files.length do
@@ -189,8 +185,7 @@ module NandoMigrator
 
   def self.get_migration_files (directory)
     if !File.directory?(directory)
-      _error "No directory '#{directory}' was found"
-      exit 1
+      raise Nando::GenericError.new("No directory '#{directory}' was found")
     end
     files = Dir.children(directory)
 
@@ -210,8 +205,7 @@ module NandoMigrator
   # TODO: might merge with "get_migration_files"
   def self.get_migration_files_to_rollback (directory, versions_to_rollback)
     if !File.directory?(directory)
-      _error "No directory '#{directory}' was found"
-      exit 1
+      raise Nando::GenericError.new("No directory '#{directory}' was found")
     end
     files = Dir.children(directory)
 
@@ -326,11 +320,16 @@ module NandoMigrator
   end
 
   def self.get_database_connection
-    conn = PG::Connection.open(:host => @db_host,
-                               :port => @db_port,
-                               :dbname => @db_name,
-                               :user => @db_username,
-                               :password => @db_password)
+    begin
+      conn = PG::Connection.open(:host => @db_host,
+                                 :port => @db_port,
+                                 :dbname => @db_name,
+                                 :user => @db_username,
+                                 :password => @db_password)
+    rescue => exception
+      raise Nando::GenericError.new(exception)
+    end
+
     return conn
   end
 
