@@ -19,7 +19,7 @@ module MigrationUpdater
       add_new_annotations_to_file_lines(functions_to_add)
     end
 
-    @curr_migration_version, curr_migration_name = NandoUtils.get_migration_version_and_name_from_file_path(migration_file_path)
+    @curr_migration_version, _ = NandoUtils.get_migration_version_and_name_from_file_path(migration_file_path)
     find_and_update()
 
     if @changed_file
@@ -185,15 +185,20 @@ module MigrationUpdater
 
     # update annotation
     source_file_text = File.readlines(source_file_full_path).join(' ')
-    function_info_match = /CREATE (?:OR REPLACE)? FUNCTION (.*)\((.*)\) RETURNS (\w*) AS \$\w*\$/im.match(source_file_text) # case insenstive and multi-line
+    # all capture groups are non-greedy, and include any character since names may have '.' for example
+    function_info_match = /CREATE (?:OR REPLACE)? FUNCTION (.*?)\((.*?)\) RETURNS (.*?) AS \$\w*\$/im.match(source_file_text) # case insenstive and multi-line
+
+    if function_info_match.nil?
+      raise Nando::GenericError.new("No function definition was found in '#{source_file_full_path}'")
+    end
 
     function_name = function_info_match[1].strip
-    function_args = function_info_match[2].strip
-    function_return = function_info_match[3].strip
+    # function_args = function_info_match[2].strip
+    # function_return = function_info_match[3].strip
 
     file_regex = "CREATE \\(OR REPLACE\\)\\? FUNCTION #{function_name}"
 
-    files_with_function = %x[grep -irl -e "#{file_regex}" ./db/migrate].split("\n").sort().reverse()
+    files_with_function = %x[grep -irl -e "#{file_regex}" #{NandoMigrator.working_dir}/#{NandoMigrator.migration_dir}].split("\n").sort().reverse()
 
     function_previous_block = nil
 
@@ -296,7 +301,7 @@ module MigrationUpdater
   ## adds new annotations to bottom of "up" method
   def self.add_new_annotations_to_file_lines (functions_to_add)
     migration_file_lines = @lines
-    up_start_index, up_end_index, down_start_index, down_end_index = get_migration_file_up_and_down_limits(migration_file_lines)
+    _, up_end_index, _, _ = get_migration_file_up_and_down_limits(migration_file_lines)
 
     # insert annotations at the bottom of the "up" method
     functions_to_add.each do |curr_function_path|
