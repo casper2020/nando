@@ -210,6 +210,12 @@ module MigrationUpdater
         next
       end
 
+      curr_file_version, _ = NandoUtils.get_migration_version_and_name_from_file_path(curr_file_path)
+      if curr_file_version.to_i > @curr_migration_version.to_i
+        _debug 'Skipping migrations more recent than the current one'
+        next
+      end
+
       up_line_index = nil
       down_line_index = nil
       function_line_index = nil
