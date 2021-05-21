@@ -42,6 +42,8 @@ module NandoInterface
       message += build_flag_message(flag[0], flag[1], required_indent)
     end
 
+    message += "Nando Version (#{Nando::VERSION})"
+
     puts message
   end
 
