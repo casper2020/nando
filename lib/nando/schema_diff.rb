@@ -571,17 +571,17 @@ module NandoSchemaDiff
     # iterate over all views with info
     info[:views][:extra].each do |view_key|
       print_extra "View '#{view_key}'"
-      mismatching_views[view_key] = "View '#{view_key}' exists in '#{source_schema}' but not in the target schema. Might need to drop it"
+      mismatching_views[view_key] = "View '#{view_key.bold}' exists in '#{source_schema}' but not in the target schema. Might need to drop it"
     end
 
     info[:views][:missing].each do |view_key|
       print_missing "View '#{view_key}'"
-      mismatching_views[view_key] = "View '#{view_key}' does not exist in '#{source_schema}'. Might need to recreate it"
+      mismatching_views[view_key] = "View '#{view_key.bold}' does not exist in '#{source_schema}'. Might need to recreate it"
     end
 
     info[:views][:mismatching].each do |view_key|
       print_mismatching "View '#{view_key}'"
-      mismatching_views[view_key] = "View '#{view_key}' does not match between schemas, please recreate it"
+      mismatching_views[view_key] = "View '#{view_key.bold}' does not match between schemas, please recreate it"
     end
 
     command_suggestions = {
@@ -737,22 +737,23 @@ module NandoSchemaDiff
   def self.build_mismatching_column_lines (column_key, column_info)
     warnings = []
     alter_tables = []
+    caution_message = " Changing this property may cause problems, use with caution!".light_red # "↳" -> symbol if I decide to pass this warning in a separate line
 
     if column_info[:left_column_num] != column_info[:right_column_num]
       warnings << "Column '#{column_key}' is on position '#{column_info[:left_column_num]}' on current schema, but on position '#{column_info[:right_column_num]}' in the target schema"
     end
     if column_info[:left_column_default] != column_info[:right_column_default]
       operation = column_info[:right_column_has_default] == 't' ? "SET DEFAULT #{column_info[:right_column_default]}".gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE) : "DROP DEFAULT"
-      warnings << "Column's '#{column_key}' DEFAULT value differs between schemas. Changing this property may cause problems, use with caution!"
+      warnings << "Column '#{column_key.bold}' DEFAULT value differs between schemas." + caution_message
       alter_tables << "ALTER COLUMN #{column_key} #{operation}"
     end
     if column_info[:left_column_datatype] != column_info[:right_column_datatype]
-      warnings << "Column's '#{column_key}' TYPE differs between schemas. Changing this property may cause problems, use with caution!"
+      warnings << "Column '#{column_key.bold}' TYPE differs between schemas." + caution_message
       alter_tables << "ALTER COLUMN #{column_key} SET DATA TYPE #{column_info[:right_column_datatype]}"
     end
     if column_info[:left_column_not_null] != column_info[:right_column_not_null]
       operation = column_info[:left_column_not_null] == 't' ? 'DROP' : 'SET'
-      warnings << "Column's '#{column_key}' NOT NULL property differs between schemas. Changing this property may cause problems, use with caution!"
+      warnings << "Column '#{column_key.bold}' NOT NULL property differs between schemas." + caution_message
       alter_tables << "ALTER COLUMN #{column_key} #{operation} NOT NULL"
     end
     return warnings, alter_tables
@@ -766,7 +767,7 @@ module NandoSchemaDiff
   def self.build_mismatching_trigger_lines (trigger_key, trigger_info)
     warnings = []
     if trigger_info[:left_trigger_definition] != trigger_info[:right_trigger_definition]
-      warnings << "Trigger '#{trigger_key}' definition is different between schemas"
+      warnings << "Trigger '#{trigger_key.bold}' definition is different between schemas"
     end
     return warnings
   end
@@ -779,7 +780,7 @@ module NandoSchemaDiff
   def self.build_mismatching_constraint_lines (constraint_key, constraint_info)
     warnings = []
     if constraint_info[:left_constraint_definition] != constraint_info[:right_constraint_definition]
-      warnings << "Constraint '#{constraint_key}' definition is different between schemas"
+      warnings << "Constraint '#{constraint_key.bold}' definition is different between schemas"
     end
     return warnings
   end
@@ -792,10 +793,10 @@ module NandoSchemaDiff
   def self.build_mismatching_index_lines(index_key, index_info)
     warnings = []
     if index_info[:left_index_definition] != index_info[:right_index_definition]
-      warnings << "Index '#{index_key}' definition is different between schemas"
+      warnings << "Index '#{index_key.bold}' definition is different between schemas"
     end
     if index_info[:left_index_columns] != index_info[:right_index_columns]
-      warnings << "Index '#{index_key}' affects different columns between schemas"
+      warnings << "Index '#{index_key.bold}' affects different columns between schemas"
     end
     return warnings
   end
