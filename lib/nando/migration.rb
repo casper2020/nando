@@ -1,9 +1,8 @@
 module Nando
 
   class Migration
-    # TODO: try and find a better way of doing this
-    def set_connection(db)
-      @db_connection = db
+    def initialize (conn)
+      @db_connection = conn
     end
 
     # TODO: any better place to put this method?
@@ -29,8 +28,20 @@ module Nando
   end
 
   class MigrationWithoutTransaction < Migration
+    def initialize (conn)
+      super(conn)
+      @db_connection.exec('DROP FUNCTION IF EXISTS sharding.create_company_shard(integer,text)')
+    end
+
     def execute_migration (method)
       self.send(method)
+    end
+
+
+    # custom CW methods
+
+    def migrate_companies
+      puts 'MIGRATE COMPANIES'
     end
   end
 
