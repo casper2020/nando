@@ -270,7 +270,7 @@ module NandoMigrator
 
     class_const = get_migration_class(migration_name)
 
-    migration_class = class_const.new(@db_connection)
+    migration_class = class_const.new(@db_connection, migration_version)
     begin
       migration_class.execute_migration(method)
     rescue => exception
