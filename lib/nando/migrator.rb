@@ -362,4 +362,16 @@ class String
   def demodulize
     self.split('::').last
   end
+
+  # converts a string to boolean
+  def to_b
+    case self.downcase.strip
+    when 'true', 'yes', 'on', 't', '1', 'y', '=='
+      return true
+    when 'nil', 'null'
+      return nil
+    else
+      return false
+    end
+  end
 end
