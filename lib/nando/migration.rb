@@ -26,6 +26,12 @@ module Nando
       end
       @conn = old_connection
     end
+
+    def invalidate_postgresql_redis_cache!
+      # TODO: how to do this?
+      Rake::Task['cloudware:toconline:system:redis:postgresql_cache_invalidate'].invoke
+      Rake::Task['cloudware:toconline:system:redis:redis_current_company_invalidate'].invoke
+    end
   end
 
   class MigrationWithoutTransaction < Migration
@@ -282,12 +288,11 @@ module Nando
       ]
     end
 
-    # TODO: added "true AS "use_sharded_company" here, might need to go over the NilClass.to_b problem some other way
     def get_user_schemas
       get_schemas %Q[
         SELECT DISTINCT "user_id" AS "id",
                "schema_name",
-               true AS "use_sharded_company",
+               false AS "use_sharded_company",
                common.get_tablespace_name("schema_name") AS "tablespace_name"
           FROM "accounting"."user_templates"
          ORDER BY "id"
