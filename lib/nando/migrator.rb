@@ -1,6 +1,7 @@
 require 'pg'
 require 'dotenv'
 require 'awesome_print'
+require 'singleton'
 
 begin
   require 'byebug'
@@ -9,14 +10,10 @@ end
 
 Dotenv.load('.env')
 
-module NandoMigrator
+class NandoMigrator
+  include Singleton
 
-  # TODO: review this is the best way to allow external classes to access module variables
-  class << self
-    attr_accessor :schema_variable, :migration_dir, :working_dir
-  end
-
-  def self.read_env_file
+  def initialize
     @migration_table = ENV['MIGRATION_TABLE_NAME'] || 'schema_migrations'
     @migration_field = ENV['MIGRATION_TABLE_FIELD'] || 'version'
     @migration_dir   = ENV['MIGRATION_DIR'] || 'db/migrate'
@@ -24,11 +21,7 @@ module NandoMigrator
     # accepts urls in the same format as dbmate => protocol://username:password@host:port/database_name
     match = /([a-zA-Z]+)\:\/\/(\w+)\:(\w+)\@([\w\.]+)\:(\d+)\/(\w+)/.match(ENV['DATABASE_URL'])
 
-    if match.nil?
-      # TODO: replace NandoMigrator with a class, move this code to the initialize and raise a generic error (doesn't work as is)
-      puts 'No .env file was found, or no valid DATABASE_URL variable was found in it'
-      exit 1
-    end
+    raise Nando::GenericError.new('No .env file was found, or no valid DATABASE_URL variable was found in it') if match.nil?
 
     @db_protocol = match[1]
     @db_username = match[2]
@@ -41,12 +34,12 @@ module NandoMigrator
     @schema_variable = ENV['SCHEMA_VARIABLE'] || '#{schema_name}'
   end
 
-  read_env_file()
+  attr_accessor :migration_table, :migration_field, :migration_dir, :working_dir, :schema_variable
 
   # --------------------------------------------------------
 
   # creates a new migration for the tool
-  def self.new_migration (options = {}, args = [])
+  def new_migration (options = {}, args = [])
     migration_name = args[0].underscore
     migration_type = options[:type] || Nando::Migration.name.demodulize # default type is migration with transaction
     migration_timestamp = Time.now.strftime("%Y%m%d%H%M%S") # same format as ActiveRecord: year-month-day-hour-minute-second
@@ -60,7 +53,7 @@ module NandoMigrator
   end
 
   # migrates all missing migrations
-  def self.migrate (options = {})
+  def migrate (options = {})
     _debug 'Migrating!'
 
     migration_files = get_migration_files(@migration_dir)
@@ -86,7 +79,7 @@ module NandoMigrator
   end
 
   # applies specific migration
-  def self.apply (options = {}, args = [])
+  def apply (options = {}, args = [])
     _debug 'Applying!'
 
     migration_version_to_apply = args[0].to_s
@@ -122,7 +115,7 @@ module NandoMigrator
   end
 
   # rollbacks 1 migration (or more depending on argument)
-  def self.rollback (options = {})
+  def rollback (options = {})
     _debug 'Rollback!'
 
     rollback_count = 1 # TODO: temporary constant, add option in command interface
@@ -152,13 +145,13 @@ module NandoMigrator
   # TODO: might add a migrate:down to distinguish from rollback, similarly to ActiveRecord
 
   # parses migrations from dbmate to nando
-  def self.parse (options = {}, args = [])
+  def parse (options = {}, args = [])
     _debug 'Parsing!'
 
     NandoParser.parse_from_dbmate(args[0], args[1])
   end
 
-  def self.baseline ()
+  def baseline ()
     _debug 'Creating Baseline!'
 
     migration_name = "baseline".underscore
@@ -170,14 +163,14 @@ module NandoMigrator
     MigrationGenerator::create_baseline_file(migration_file_path, migration_name)
   end
 
-  def self.update_migration (options = {}, args = [])
+  def update_migration (options = {}, args = [])
     _debug 'Updating!'
     functions_to_add = options[:functions_to_add]
 
     MigrationUpdater.update_migration(args[0], @working_dir, functions_to_add)
   end
 
-  def self.diff_schemas (options = {}, args = [])
+  def diff_schemas (options = {}, args = [])
     _debug 'Schema Diff'
 
     NandoSchemaDiff.diff_schemas(args[0], args[1])
@@ -185,7 +178,7 @@ module NandoMigrator
 
   # --------------------------------------------------------
 
-  def self.get_migration_files (directory)
+  def get_migration_files (directory)
     if !File.directory?(directory)
       raise Nando::GenericError.new("No directory '#{directory}' was found")
     end
@@ -205,7 +198,7 @@ module NandoMigrator
   end
 
   # TODO: might merge with "get_migration_files"
-  def self.get_migration_files_to_rollback (directory, versions_to_rollback)
+  def get_migration_files_to_rollback (directory, versions_to_rollback)
     if !File.directory?(directory)
       raise Nando::GenericError.new("No directory '#{directory}' was found")
     end
@@ -227,7 +220,7 @@ module NandoMigrator
     migration_files.sort.reverse # sort and reverse to ensure the migrations are executed chronologically (backwards)
   end
 
-  def self.get_applied_migrations ()
+  def get_applied_migrations ()
     # run the query
     results = @db_connection.exec("SELECT * FROM #{@migration_table} ORDER BY #{@migration_field} asc")
 
@@ -242,7 +235,7 @@ module NandoMigrator
     return applied_migrations
   end
 
-  def self.get_migrations_to_revert (count)
+  def get_migrations_to_revert (count)
     # run the query
     results = @db_connection.exec("SELECT * FROM #{@migration_table} ORDER BY #{@migration_field} desc LIMIT #{count}")
 
@@ -257,7 +250,7 @@ module NandoMigrator
     return migrations_to_rollback
   end
 
-  def self.execute_migration_method (method, filename, migration_name, migration_version, skip_insert_version = false)
+  def execute_migration_method (method, filename, migration_name, migration_version, skip_insert_version = false)
     if method == :up
       migrating = true
     else
@@ -284,7 +277,7 @@ module NandoMigrator
     end
   end
 
-  def self.update_migration_table (version, to_apply = true)
+  def update_migration_table (version, to_apply = true)
     if to_apply
       @db_connection.exec("INSERT INTO #{@migration_table} (#{@migration_field}) VALUES (#{version})")
     else
@@ -292,7 +285,7 @@ module NandoMigrator
     end
   end
 
-  def self.camelize_migration_type (migration_type)
+  def camelize_migration_type (migration_type)
     camelize_migration_type = migration_type.camelize
     if !['Migration', 'MigrationWithoutTransaction'].include?(camelize_migration_type)
       raise Nando::GenericError.new("Invalid migration type '#{migration_type}'")
@@ -300,12 +293,12 @@ module NandoMigrator
     return camelize_migration_type
   end
 
-  def self.get_migration_class (filename)
+  def get_migration_class (filename)
     name = filename.camelize
     Object.const_defined?(name) ? Object.const_get(name) : Object.const_missing(name) # if the constant does not exist, raise error
   end
 
-  def self.create_schema_migrations_table_if_not_exists
+  def create_schema_migrations_table_if_not_exists
     results = @db_connection.exec("SELECT EXISTS (
       SELECT FROM information_schema.tables
        WHERE table_schema = 'public'
@@ -320,7 +313,7 @@ module NandoMigrator
     end
   end
 
-  def self.get_database_connection
+  def get_database_connection
     begin
       conn = PG::Connection.open(:host => @db_host,
                                  :port => @db_port,

@@ -198,7 +198,7 @@ module MigrationUpdater
 
     file_regex = "CREATE \\(OR REPLACE\\)\\? FUNCTION #{function_name}"
 
-    files_with_function = %x[grep -irl -e "#{file_regex}" #{NandoMigrator.working_dir}/#{NandoMigrator.migration_dir}].split("\n").sort().reverse()
+    files_with_function = %x[grep -irl -e "#{file_regex}" #{NandoMigrator.instance.working_dir}/#{NandoMigrator.instance.migration_dir}].split("\n").sort().reverse()
 
     function_previous_block = nil
 

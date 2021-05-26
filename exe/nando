@@ -35,36 +35,36 @@ begin
   action = ARGV.shift()
   case action
   when 'up'
-    NandoMigrator.migrate()
+    NandoMigrator.instance.migrate()
   when 'down'
-    NandoMigrator.rollback()
+    NandoMigrator.instance.rollback()
   when 'apply'
     if ARGV[0].nil?
       raise Nando::InputError.new('Insufficient arguments') # ARGV[0] is the migration version to apply
     end
-    NandoMigrator.apply(options, ARGV)
+    NandoMigrator.instance.apply(options, ARGV)
   when 'new'
     if ARGV[0].nil?
       raise Nando::InputError.new('Insufficient arguments') # ARGV[0] is the new migration name
     end
-    NandoMigrator.new_migration(options, ARGV)
+    NandoMigrator.instance.new_migration(options, ARGV)
   when 'parse'
     if ARGV[0].nil? || ARGV[1].nil?
       raise Nando::InputError.new('Insufficient arguments')
     end
-    NandoMigrator.parse(options, ARGV)
+    NandoMigrator.instance.parse(options, ARGV)
   when 'baseline'
-    NandoMigrator.baseline()
+    NandoMigrator.instance.baseline()
   when 'update'
     if ARGV[0].nil?
       raise Nando::InputError.new('Insufficient arguments') # ARGV[0] is the new migration file
     end
-    NandoMigrator.update_migration(options, ARGV)
+    NandoMigrator.instance.update_migration(options, ARGV)
   when 'diff'
     if ARGV[0].nil? || ARGV[1].nil?
       raise Nando::InputError.new('Insufficient arguments')
     end
-    NandoMigrator.diff_schemas(options, ARGV)
+    NandoMigrator.instance.diff_schemas(options, ARGV)
   else
     raise Nando::InputError.new("Invalid command '#{action}'")
   end

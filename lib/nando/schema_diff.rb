@@ -1,13 +1,14 @@
 module NandoSchemaDiff
 
   SCHEMA_PLACEHOLDER = '___SCHEMANAME___'
-  SCHEMA_VARIABLE = NandoMigrator.schema_variable
   TABLE_TYPE = {
     'r' => :tables,
     'v' => :views
   }
 
   def self.diff_schemas (source_schema, target_schema)
+
+    @schema_variable = NandoMigrator.instance.schema_variable
 
     source_info = get_info_base_structure()
     target_info = get_info_base_structure()
@@ -62,8 +63,8 @@ module NandoSchemaDiff
     check_mismatching_indexes(target[:tables], source[:tables], target_info, source_info)
 
 
-    source_suggestions = print_diff_info(source_info, SCHEMA_VARIABLE, source_schema, target_schema)
-    target_suggestions = print_diff_info(target_info, SCHEMA_VARIABLE, target_schema, source_schema)
+    source_suggestions = print_diff_info(source_info, @schema_variable, source_schema, target_schema)
+    target_suggestions = print_diff_info(target_info, @schema_variable, target_schema, source_schema)
 
     # TODO: might skip this if there is no diff
 
@@ -75,10 +76,10 @@ module NandoSchemaDiff
     # suggestions
     puts "\n\n===========================//===========================\n".magenta.bold
     puts "\nSuggestion for ".magenta.bold + "'up'".white.bold + ":".magenta.bold
-    print_schema_correction_suggestions(SCHEMA_VARIABLE, source_suggestions)
+    print_schema_correction_suggestions(@schema_variable, source_suggestions)
 
     puts "\nSuggestion for ".magenta.bold + "'down'".white.bold + ":".magenta.bold
-    print_schema_correction_suggestions(SCHEMA_VARIABLE, target_suggestions)
+    print_schema_correction_suggestions(@schema_variable, target_suggestions)
     puts ""
   end
 
@@ -87,7 +88,7 @@ module NandoSchemaDiff
       :tables => {},
       :views => {}
     }
-    db_connection = NandoMigrator.get_database_connection()
+    db_connection = NandoMigrator.instance.get_database_connection()
 
     # get all tables/views in the schema
     results = db_connection.exec("
@@ -731,7 +732,7 @@ module NandoSchemaDiff
     end
 
     # replace placeholder, clear extra spaces
-    return add_column_line.gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE).gsub(/\s+/, ' ').strip
+    return add_column_line.gsub(SCHEMA_PLACEHOLDER, @schema_variable).gsub(/\s+/, ' ').strip
   end
 
   def self.build_mismatching_column_lines (column_key, column_info)
@@ -743,7 +744,7 @@ module NandoSchemaDiff
       warnings << "Column '#{column_key}' is on position '#{column_info[:left_column_num]}' on current schema, but on position '#{column_info[:right_column_num]}' in the target schema"
     end
     if column_info[:left_column_default] != column_info[:right_column_default]
-      operation = column_info[:right_column_has_default] == 't' ? "SET DEFAULT #{column_info[:right_column_default]}".gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE) : "DROP DEFAULT"
+      operation = column_info[:right_column_has_default] == 't' ? "SET DEFAULT #{column_info[:right_column_default]}".gsub(SCHEMA_PLACEHOLDER, @schema_variable) : "DROP DEFAULT"
       warnings << "Column '#{column_key.bold}' DEFAULT value differs between schemas." + caution_message
       alter_tables << "ALTER COLUMN #{column_key} #{operation}"
     end
@@ -760,7 +761,7 @@ module NandoSchemaDiff
   end
 
   def self.build_add_trigger_line (trigger_key, trigger_info)
-    trigger_def = trigger_info[:trigger_definition].gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE)
+    trigger_def = trigger_info[:trigger_definition].gsub(SCHEMA_PLACEHOLDER, @schema_variable)
     return trigger_def
   end
 
@@ -773,7 +774,7 @@ module NandoSchemaDiff
   end
 
   def self.build_add_constraint_line (constraint_key, constraint_info)
-    constraint_def = constraint_info[:constraint_definition].gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE)
+    constraint_def = constraint_info[:constraint_definition].gsub(SCHEMA_PLACEHOLDER, @schema_variable)
     return "ADD CONSTRAINT \"#{constraint_key}\" #{constraint_def}"
   end
 
@@ -786,7 +787,7 @@ module NandoSchemaDiff
   end
 
   def self.build_add_index_line(index_key, index_info)
-    index_def = index_info[:index_definition].gsub(SCHEMA_PLACEHOLDER, SCHEMA_VARIABLE)
+    index_def = index_info[:index_definition].gsub(SCHEMA_PLACEHOLDER, @schema_variable)
     return index_def
   end
 

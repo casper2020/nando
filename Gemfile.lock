@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    nando (1.0.4)
+    nando (1.0.5)
       awesome_print (~> 1.8.0)
       colorize (~> 0.8.1)
       dotenv (~> 2.7.6)
@@ -38,7 +38,7 @@ PLATFORMS
 
 DEPENDENCIES
   bundler (~> 1.17.3)
-  byebug (~> 9.0.6)
+  byebug
   nando!
   rake (~> 10.0)
   rspec (~> 3.2)

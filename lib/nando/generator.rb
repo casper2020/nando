@@ -42,7 +42,7 @@ module MigrationGenerator
       raise Nando::GenericError.new("No directory '#{dir}' was found")
     end
 
-    @db_connection = NandoMigrator.get_database_connection();
+    @db_connection = NandoMigrator.instance.get_database_connection();
     results = @db_connection.exec("
       SELECT n.nspname AS function_schema,
              p.proname AS function_name,
