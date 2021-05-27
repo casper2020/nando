@@ -4,14 +4,14 @@ module Nando
     def initialize (conn, version)
       @conn = conn
       @version = version
+      @migration_table = NandoMigrator.instance.migration_table
+      @migration_field = NandoMigrator.instance.migration_field
     end
 
-    # TODO: any better place to put this method?
     def execute (sql)
       @conn.exec(sql)
     end
 
-    # TODO: any better place to put this method?
     def update_function (sql)
       # TODO: add validations here
       @conn.exec(sql)
@@ -316,8 +316,7 @@ module Nando
     end
 
     def migration_ran_on_schema? (schema, migration_version, conn = nil)
-      # TODO: replace with "migration_table" env variable
-      query = %Q[SELECT 1 FROM "#{schema['schema_name']}"."schema_migrations" WHERE "version" = '#{migration_version}']
+      query = %Q[SELECT 1 FROM "#{schema['schema_name']}"."#{@migration_table}" WHERE "#{@migration_field}" = '#{migration_version}']
       if conn.nil?
         @conn.exec(query).any?
       else
@@ -326,8 +325,7 @@ module Nando
     end
 
     def migration_ran_on_schema! (schema, migration_version, conn = nil)
-      # TODO: replace with "migration_table" env variable
-      query = %Q[INSERT INTO "#{schema['schema_name']}"."schema_migrations" ("version") VALUES ('#{migration_version}')]
+      query = %Q[INSERT INTO "#{schema['schema_name']}"."#{@migration_table}" ("#{@migration_field}") VALUES ('#{migration_version}')]
       if conn.nil?
         @conn.exec(query)
       else
@@ -336,8 +334,7 @@ module Nando
     end
 
     def migration_rolled_back_on_schema! (schema, migration_version, conn = nil)
-      # TODO: replace with "migration_table" env variable
-      query = %Q[DELETE FROM "#{schema['schema_name']}"."schema_migrations" WHERE "version" = '#{migration_version}']
+      query = %Q[DELETE FROM "#{schema['schema_name']}"."#{@migration_table}" WHERE "#{@migration_field}" = '#{migration_version}']
       if conn.nil?
         @conn.exec(query)
       else
