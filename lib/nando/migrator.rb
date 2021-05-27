@@ -186,7 +186,7 @@ class NandoMigrator
 
     migration_files = []
     for filename in files do
-      if !/\d\_.*\.rb$/.match(filename)
+      if !/^(\d+)\_(.*)\.rb$/.match(filename)
         _warn "#{filename} does not have a valid migration name. Skipping!"
         next
       end
@@ -197,7 +197,6 @@ class NandoMigrator
     migration_files.sort! # sort to ensure the migrations are executed chronologically
   end
 
-  # TODO: might merge with "get_migration_files"
   def get_migration_files_to_rollback (directory, versions_to_rollback)
     if !File.directory?(directory)
       raise Nando::GenericError.new("No directory '#{directory}' was found")
@@ -206,7 +205,7 @@ class NandoMigrator
 
     migration_files = []
     for filename in files do
-      match = /(\d+)\_.*\.rb$/.match(filename)
+      match = /^(\d+)\_(.*)\.rb$/.match(filename)
       if match.nil?
         _warn "#{filename} does not have a valid migration name. Skipping!"
         next

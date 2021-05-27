@@ -62,7 +62,7 @@ module MigrationGenerator
     up_method = ''
     number_of_functions = 0
     indent = '    '
-    # TODO: try to indent the functions correctly
+
     for row in results do
       up_method += "\n" + indent + "update_function <<-'SQL'\n"
       up_method += "#{row['definition']}"
