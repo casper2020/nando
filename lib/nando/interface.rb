@@ -16,7 +16,7 @@ module NandoInterface
       ['parse <source> <destination>', "Parses all the #{"dbmate".white.bold} migrations in the source folder into #{"Nando".white.bold} migrations in the destination folder"],
       ['baseline', "Creates a baseline Nando migration with all the functions currently in the database"],
       ['update <path to migration>', "Updates the specified migration. Use #{"-f/--function".white.bold} to add one or more functions to the migration file"],
-      ['diff <source> <target>', "WIP, but compares 2 schemas in the database and suggests SQL commands to fix any changes found"]
+      ['diff <source> <target>', "Compares 2 schemas in the database and suggests SQL commands to fix any changes found"]
     ]
 
     largest_command = commands.max { |a,b| a[0].length <=> b[0].length }
