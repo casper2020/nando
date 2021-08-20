@@ -31,6 +31,7 @@ module NandoInterface
     flags = [
       ['-t/--type', 'Used to specify the migration type'],
       ['-f/--function', 'Used to specify which function files to add to a migration'],
+      ['-d/--dry-run', 'Used to prevent the tool from applying migrations and only provide info'],
       ['-h/--help', 'Shows the help message']
     ]
 

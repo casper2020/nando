@@ -56,6 +56,7 @@ class NandoMigrator
   def migrate (options = {})
     _debug 'Migrating!'
 
+    migrations_to_apply = []
     migration_files = get_migration_files(@migration_dir)
 
     if migration_files.length == 0
@@ -73,7 +74,22 @@ class NandoMigrator
         next
       end
 
-      execute_migration_method(:up, filename, migration_name, migration_version)
+      if options[:dry_run]
+        migrations_to_apply << {:migration_version => migration_version, :migration_name => migration_name}
+      else
+        execute_migration_method(:up, filename, migration_name, migration_version)
+      end
+    end
+
+    if options[:dry_run]
+      if migrations_to_apply.count > 0
+        puts "Migrations that would be applied:"
+        for migration in migrations_to_apply do
+          puts "=> #{migration[:migration_version]} - '#{migration[:migration_name]}'"
+        end
+      else
+        _warn 'No migration would be applied'
+      end
     end
 
   end

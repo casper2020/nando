@@ -23,6 +23,10 @@ parser = OptionParser.new do |opt|
     end
   end
 
+  opt.on("-d", "--dry-run", "Pass value") do |bool|
+    options[:dry_run] = true
+  end
+
   opt.on("-h", "--help", "Show this message") do |value|
     NandoInterface.print_help_message()
     exit 0
@@ -35,7 +39,7 @@ begin
   action = ARGV.shift()
   case action
   when 'up'
-    NandoMigrator.instance.migrate()
+    NandoMigrator.instance.migrate(options)
   when 'down'
     NandoMigrator.instance.rollback()
   when 'apply'
