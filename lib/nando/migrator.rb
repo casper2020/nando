@@ -19,7 +19,7 @@ class NandoMigrator
     @migration_dir   = ENV['MIGRATION_DIR'] || 'db/migrate'
 
     # accepts urls in the same format as dbmate => protocol://username:password@host:port/database_name
-    match = /([a-zA-Z]+)\:\/\/(\w+)\:(\w+)\@([\w\.]+)\:(\d+)\/(\w+)/.match(ENV['DATABASE_URL'])
+    match = /([a-zA-Z]+)\:\/\/(\w+)\:(\w+)\@([\w\.]+)\:(\d+)\/([\w-]+)/.match(ENV['DATABASE_URL'])
 
     raise Nando::GenericError.new('No .env file was found, or no valid DATABASE_URL variable was found in it') if match.nil?
 
