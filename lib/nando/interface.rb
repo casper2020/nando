@@ -12,6 +12,7 @@ module NandoInterface
       ['up', "Executes all the migrations that are not yet on the #{schema_mig_table.white.bold} table"],
       ['down', "Rollbacks the last migration in the #{schema_mig_table.white.bold} table"],
       ['apply <version>', "Applies the migration with the specified version (even if it was already executed). Intended for development, not production"],
+      ['revert <version>', "Reverts the migration with the specified version (even if it hasn't been executed). Intended for development, not production"],
       ['new <migration name>', "Creates a new migration with the specified name. Use the #{"-t/--type".white.bold} flag to specify the type of migration: #{"[Migration|MigrationWithoutTransaction]".white.bold}"],
       ['parse <source> <destination>', "Parses all the #{"dbmate".white.bold} migrations in the source folder into #{"Nando".white.bold} migrations in the destination folder"],
       ['baseline', "Creates a baseline Nando migration with all the functions currently in the database"],

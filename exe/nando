@@ -47,6 +47,11 @@ begin
       raise Nando::InputError.new('Insufficient arguments') # ARGV[0] is the migration version to apply
     end
     NandoMigrator.instance.apply(options, ARGV)
+  when 'revert'
+    if ARGV[0].nil?
+      raise Nando::InputError.new('Insufficient arguments') # ARGV[0] is the migration version to revert
+    end
+    NandoMigrator.instance.revert(options, ARGV)
   when 'new'
     if ARGV[0].nil?
       raise Nando::InputError.new('Insufficient arguments') # ARGV[0] is the new migration name
