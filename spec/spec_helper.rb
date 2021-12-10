@@ -1,5 +1,6 @@
 require "bundler/setup"
 require "nando"
+require 'helpers/include'
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
