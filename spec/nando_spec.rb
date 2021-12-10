@@ -32,4 +32,16 @@ RSpec.describe Nando do
     expect(match[6]).to eq('nando_test_migrate')
   end
 
+  it 'handles only specified migration types' do
+    NandoMigrator.instance.camelize_migration_type('Migration')
+    NandoMigrator.instance.camelize_migration_type('MigrationWithoutTransaction')
+
+    begin
+      # this should fail
+      NandoMigrator.instance.camelize_migration_type('MigrationFakeType123')
+    rescue => e
+      expect(e.message).to eq("Invalid migration type 'MigrationFakeType123'")
+    end
+  end
+
 end
