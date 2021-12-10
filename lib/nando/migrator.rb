@@ -18,17 +18,7 @@ class NandoMigrator
     @migration_field = ENV['MIGRATION_TABLE_FIELD'] || 'version'
     @migration_dir   = ENV['MIGRATION_DIR'] || 'db/migrate'
 
-    # accepts urls in the same format as dbmate => protocol://username:password@host:port/database_name
-    match = /([a-zA-Z]+)\:\/\/(\w+)\:(\w+)\@([\w\.]+)\:(\d+)\/([\w-]+)/.match(ENV['DATABASE_URL'])
-
-    raise Nando::GenericError.new('No .env file was found, or no valid DATABASE_URL variable was found in it') if match.nil?
-
-    @db_protocol = match[1]
-    @db_username = match[2]
-    @db_password = match[3]
-    @db_host = match[4]
-    @db_port = match[5]
-    @db_name = match[6]
+    parse_database_url(ENV['DATABASE_URL'])
 
     @working_dir = ENV['WORKING_DIR'] || '.'
     @schema_variable = ENV['SCHEMA_VARIABLE'] || '#{schema_name}'
@@ -229,6 +219,21 @@ class NandoMigrator
   end
 
   # --------------------------------------------------------
+
+  def parse_database_url (url)
+    # accepts urls in the same format as dbmate => protocol://username:password@host:port/database_name
+    match = /([a-zA-Z]+)\:\/\/([\w\-]+)\:([\w\-]+)\@([\w\-\.]+)\:(\d+)\/([\w\-]+)/.match(url)
+
+    raise Nando::GenericError.new('No .env file was found, or no valid DATABASE_URL variable was found in it') if match.nil?
+
+    @db_protocol = match[1]
+    @db_username = match[2]
+    @db_password = match[3]
+    @db_host = match[4]
+    @db_port = match[5]
+    @db_name = match[6]
+    match
+  end
 
   def get_migration_files (directory)
     if !File.directory?(directory)
