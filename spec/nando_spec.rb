@@ -44,4 +44,26 @@ RSpec.describe Nando do
     end
   end
 
+
+  # integration testing
+
+  # "nando new" integration testing
+  it 'creates a proper file' do
+
+    migration_dir = ENV['MIGRATION_DIR']
+    migration_name = 'NandoNewIntegrationTesting'
+
+    # start by clearing folder
+    %x[ rm -rf #{migration_dir}/* ]
+
+    # TODO: somehow redirect output from puts/ap
+    NandoMigrator.instance.new_migration({}, [migration_name])
+
+    files = Find.find(migration_dir).find_all{ |f| f =~ /(\d){14}_#{migration_name.underscore}\.rb$/i }
+    expect(files.length).to eq(1)
+
+    # delete any created files
+    %x[ rm -rf #{migration_dir}/* ]
+  end
+
 end
